@@ -163,6 +163,10 @@ export function getStatusReason(scout: ScoutAdvancement): string {
         .filter(r => r.dateEarned)
         .sort((a, b) => RANK_ORDER.indexOf(a.rankName) - RANK_ORDER.indexOf(b.rankName));
 
+    if (ageYears >= 12 && earnedRanks.length === 0) {
+        return `⚠️ Age ${ageYears} and no ranks earned yet — needs to start advancement trail toward Eagle.`;
+    }
+
     const currentRank = earnedRanks[earnedRanks.length - 1]?.rankName || 'None';
     const nextRank = RANK_ORDER[RANK_ORDER.indexOf(currentRank) + 1];
 
