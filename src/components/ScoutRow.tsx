@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { addMonths, differenceInMonths, parseISO } from "date-fns";
 import { Mail } from "lucide-react";
+import { ScoutSelectCheckbox } from "./ScoutSelectCheckbox";
 import type { ScoutAdvancement } from "../logic/advancement";
 import {
   getStatus,
@@ -60,7 +61,6 @@ export const ScoutRow: React.FC<Props> = ({
   isSelected = false,
   onSelectChange,
 }) => {
-  const [tooltipVisible, setTooltipVisible] = useState(false);
   const [showMbPopover, setShowMbPopover] = useState(false);
   const status = getStatus(scoutData);
   const reason = getStatusReason(scoutData);
@@ -77,12 +77,6 @@ export const ScoutRow: React.FC<Props> = ({
     );
 
   const currentRank = earnedRanks[earnedRanks.length - 1]?.rankName ?? "None";
-  const nextRank = RANK_ORDER[RANK_ORDER.indexOf(currentRank) + 1];
-
-  const lastEarnedDateStr = earnedRanks[earnedRanks.length - 1]?.dateEarned;
-  const monthsSinceLastRank = lastEarnedDateStr
-    ? differenceInMonths(now, parseISO(lastEarnedDateStr))
-    : null;
 
   const missingEagleReqs = calculateMissingEagleRequired(
     scoutData.earnedMeritBadges || [],
@@ -259,446 +253,391 @@ export const ScoutRow: React.FC<Props> = ({
   }[status];
 
   return (
-    <div
+    <article
       className="scout-card"
       style={{
-        background:
-          status === "red"
-            ? "rgba(239, 68, 68, 0.08)"
-            : status === "yellow"
-              ? "rgba(245, 158, 11, 0.08)"
-              : "var(--card-bg)",
-        borderLeft: `3px solid ${statusColor}`,
         position: "relative",
         zIndex: showMbPopover ? 50 : 1,
       }}
     >
-      {/* ── Single-line header with all components ── */}
-      <div
-        className="scout-card-header"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.6rem",
-          marginBottom: "0.75rem",
-          flexWrap: "nowrap",
-          overflowX: "auto",
-          scrollbarWidth: "none",
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
-        {/* Checkbox */}
-        {userId !== undefined && (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => onSelectChange?.(userId, e.target.checked)}
-            className="scout-checkbox"
-            style={{ cursor: "pointer", width: 16, height: 16, flexShrink: 0 }}
-            title="Select for comparison"
-          />
-        )}
-
-        {/* Email icon button */}
-        <button
-          onClick={draftEmail}
-          title="Draft Progress Report Email"
-          className="scout-email-btn"
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#94a3b8",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "0.2rem",
-            transition: "all 0.2s",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#fff";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "#94a3b8";
-          }}
-        >
-          <Mail size={14} />
-        </button>
-
-        {/* Emoji rank */}
-        <span
-          className="scout-rank-emoji"
-          style={{ fontSize: "1rem", fontWeight: 700, flexShrink: 0 }}
-        >
-          {RANK_SHORT[currentRank] || "⚜️"}
-        </span>
-
-        {/* Scout name */}
-        <span
-          className="scout-name"
-          style={{ fontSize: "1rem", fontWeight: 700, flexShrink: 0 }}
-        >
-          {scoutData.nickname || firstName} {lastName}
-        </span>
-
-        {/* Age and time remaining combined */}
-        <span
-          className="scout-age-time"
-          style={{
-            fontSize: "0.8rem",
-            color: "var(--text-dim)",
-            flexShrink: 1,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {getAgeString()}
-          {monthsUntil18 !== null && ` • ${monthsUntil18}mo remaining`}
-        </span>
-
-        {/* Current rank */}
-        <span
-          className="scout-rank"
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            padding: "0.15rem 0.5rem",
-            borderRadius: "999px",
-            background: "rgba(99,102,241,0.15)",
-            border: "1px solid rgba(99,102,241,0.4)",
-            color: "#a5b4fc",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-        >
-          {currentRank === "None" ? "No Rank" : currentRank}
-        </span>
-
-        {/* Status indicator */}
-        <span
-          className="scout-status"
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            padding: "0.15rem 0.5rem",
-            borderRadius: "999px",
-            background: `${statusColor}20`,
-            border: `1px solid ${statusColor}`,
-            color: statusColor,
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            gap: "0.25rem",
-          }}
-        >
-          {reason}
-        </span>
-
-        {/* Merit badges section */}
-        <div
-          className="scout-merit-badges"
-          style={{
-            position: "relative",
-            fontSize: "0.75rem",
-            color: totalMissing === 0 ? "#4ade80" : "var(--text-dim)",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.25rem",
-            whiteSpace: "nowrap",
-            cursor: "pointer",
-            userSelect: "none",
-            flexShrink: 0,
-          }}
-          onClick={() => setShowMbPopover(!showMbPopover)}
-        >
-          <span style={{ fontSize: "0.9rem" }}>🎖</span>
-          {totalMissing === 0 ? "All 21!" : `${totalMissing} left`}
-
-          {showMbPopover && totalMissing > 0 && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: "50%",
-                transform: "translateX(-50%)",
-                marginTop: "0.5rem",
-                zIndex: 50,
-                padding: "0.75rem",
-                background: "#1e293b",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: "0.5rem",
-                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
-                minWidth: "220px",
-                cursor: "default",
-                textAlign: "left",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 600,
-                  color: "#f8fafc",
-                  marginBottom: "0.5rem",
-                  borderBottom: "1px solid rgba(255,255,255,0.1)",
-                  paddingBottom: "0.25rem",
-                }}
-              >
-                Missing Eagle Requirements:
-              </div>
-              <ul
-                style={{
-                  margin: 0,
-                  paddingLeft: "1.2rem",
-                  color: "#94a3b8",
-                  fontSize: "0.7rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.2rem",
-                  whiteSpace: "normal",
-                }}
-              >
-                {missingEagleReqs.map((req) => (
-                  <li key={req}>{req}</li>
-                ))}
-                {missingElectives > 0 && (
-                  <li
-                    key="elective"
-                    style={{ marginTop: "0.25rem", color: "#cbd5e1" }}
-                  >
-                    {missingElectives} Elective badge
-                    {missingElectives !== 1 ? "s" : ""}
-                  </li>
-                )}
-              </ul>
-            </div>
+      {/* ── Single-line header: left | centered status | right badges ── */}
+      <header className="scout-card-header">
+        <div className="scout-header-left">
+          {userId !== undefined && onSelectChange && (
+            <ScoutSelectCheckbox
+              userId={userId}
+              checked={isSelected}
+              onChange={onSelectChange}
+            />
           )}
+
+          <button
+            type="button"
+            onClick={draftEmail}
+            title="Draft Progress Report Email"
+            className="scout-email-btn"
+          >
+            <Mail size={14} />
+          </button>
+
+          <span className="scout-rank-emoji-wrap" aria-hidden>
+            <span className="scout-rank-emoji">
+              {RANK_SHORT[currentRank] || "⚜️"}
+            </span>
+          </span>
+
+          <span className="scout-name scout-name--header">
+            {scoutData.nickname || firstName} {lastName}
+          </span>
+
+          <span className="scout-age-time">
+            {getAgeString()}
+          </span>
         </div>
-      </div>
 
-      {/* ── Time-scaled bar graph ── */}
-      <div style={{ position: "relative", height: 40, userSelect: "none" }}>
-        {/* Track */}
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: 0,
-            right: 0,
-            height: 6,
-            borderRadius: 3,
-            background: "rgba(255,255,255,0.06)",
-            transform: "translateY(-50%)",
-          }}
-        />
+        <div className="scout-header-center">
+          <span
+            className="scout-status"
+            style={{
+              background: `${statusColor}20`,
+              border: `1px solid ${statusColor}`,
+              color: statusColor,
+            }}
+          >
+            {reason}
+          </span>
+        </div>
 
-        {/* Pre-join inactive section */}
-        {preJoinPercent > 0 && (
+        <div className="scout-header-right">
           <div
-            title="Time before joining unit"
+            className="scout-merit-badges"
+            style={{
+              position: "relative",
+              fontSize: "0.75rem",
+              color:
+                totalMissing === 0 ? "var(--success-bright)" : "var(--text-dim)",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.25rem",
+              whiteSpace: "nowrap",
+              cursor: "pointer",
+              userSelect: "none",
+            }}
+            onClick={() => setShowMbPopover(!showMbPopover)}
+          >
+            <span className="scout-merit-badges__icon" style={{ fontSize: "0.9rem" }}>
+              🎖
+            </span>
+            {totalMissing === 0 ? "All 21!" : `${totalMissing} left`}
+
+            {showMbPopover && totalMissing > 0 && (
+              <div
+                className="scout-merit-popover"
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  marginTop: "0.5rem",
+                  zIndex: 50,
+                  padding: "0.75rem",
+                  background: "var(--popover-bg)",
+                  border: "1px solid var(--popover-border)",
+                  borderRadius: "0.5rem",
+                  boxShadow: "var(--shadow-popover)",
+                  minWidth: "220px",
+                  cursor: "default",
+                  textAlign: "left",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  className="scout-merit-popover__title"
+                  style={{
+                    fontSize: "0.7rem",
+                    fontWeight: 600,
+                    color: "var(--popover-title)",
+                    marginBottom: "0.5rem",
+                    borderBottom: "1px solid var(--popover-border)",
+                    paddingBottom: "0.25rem",
+                  }}
+                >
+                  Missing Eagle Requirements:
+                </div>
+                <ul
+                  className="scout-merit-popover__list"
+                  style={{
+                    margin: 0,
+                    paddingLeft: "1.2rem",
+                    color: "var(--popover-text)",
+                    fontSize: "0.7rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.2rem",
+                    whiteSpace: "normal",
+                  }}
+                >
+                  {missingEagleReqs.map((req) => (
+                    <li key={req}>{req}</li>
+                  ))}
+                  {missingElectives > 0 && (
+                    <li
+                      key="elective"
+                      style={{
+                        marginTop: "0.25rem",
+                        color: "var(--text-dim)",
+                      }}
+                    >
+                      {missingElectives} Elective badge
+                      {missingElectives !== 1 ? "s" : ""}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="scout-card__body">
+        {/* ── Time-scaled bar graph ── */}
+        <div
+          className="scout-timeline"
+          style={{ position: "relative", height: 40, userSelect: "none" }}
+        >
+          {/* Track */}
+          <div
+            className="scout-timeline__track"
             style={{
               position: "absolute",
               top: "50%",
-              transform: "translateY(-50%)",
               left: 0,
-              width: `${preJoinPercent}%`,
+              right: 0,
               height: 6,
-              borderRadius: "3px 0 0 3px",
-              background: `repeating-linear-gradient(
-                                -45deg,
-                                rgba(255,255,255,0.1), rgba(255,255,255,0.1) 4px,
-                                transparent 4px, transparent 8px
-                            )`,
-              border: "1px solid rgba(255,255,255,0.12)",
-              zIndex: 1,
+              borderRadius: 3,
+              background: "var(--timeline-track-bg)",
+              transform: "translateY(-50%)",
             }}
           />
-        )}
 
-        {/* Wait zones: stripe background + elapsed-progress overlay */}
-        {waitZones.map((z) => {
-          const stripeColor = z.isSpeculative
-            ? "rgba(251,191,36,0.18)"
-            : "rgba(251,191,36,0.38)";
-          const stripeAlt = z.isSpeculative
-            ? "rgba(251,191,36,0.04)"
-            : "rgba(251,191,36,0.09)";
-          const borderColor = z.isSpeculative
-            ? "rgba(251,191,36,0.12)"
-            : "rgba(251,191,36,0.28)";
-          const progressColor = z.isSpeculative
-            ? "rgba(99,102,241,0.22)"
-            : "rgba(99,102,241,0.55)";
-          return (
-            <React.Fragment key={z.rank}>
-              {/* Full wait stripe */}
-              <div
-                title={`${z.isSpeculative ? "Projected " : ""}${WAIT_TIMES[z.rank]}-month wait for ${z.rank}`}
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  left: `${z.start}%`,
-                  width: `${z.end - z.start}%`,
-                  height: 6,
-                  borderRadius: 3,
-                  background: `repeating-linear-gradient(
-                                        -45deg,
-                                        ${stripeColor}, ${stripeColor} 3px,
-                                        ${stripeAlt} 3px, ${stripeAlt} 7px
-                                    )`,
-                  border: `1px solid ${borderColor}`,
-                }}
-              />
-              {/* Elapsed progress within the wait window */}
-              {z.nowClamp > z.start && (
+          {/* Pre-join inactive section */}
+          {preJoinPercent > 0 && (
+            <div
+              className="scout-timeline__prejoin"
+              title="Time before joining unit"
+              style={{
+                position: "absolute",
+                top: "50%",
+                transform: "translateY(-50%)",
+                left: 0,
+                width: `${preJoinPercent}%`,
+                height: 6,
+                borderRadius: "3px 0 0 3px",
+                background: `repeating-linear-gradient(
+                                -45deg,
+                                var(--timeline-prejoin-stripe), var(--timeline-prejoin-stripe) 4px,
+                                transparent 4px, transparent 8px
+                            )`,
+                border: "1px solid var(--timeline-prejoin-border)",
+                zIndex: 1,
+              }}
+            />
+          )}
+
+          {/* Wait zones: stripe background + elapsed-progress overlay */}
+          {waitZones.map((z) => {
+            const stripeColor = z.isSpeculative
+              ? "var(--wait-stripe-a)"
+              : "var(--wait-stripe-b)";
+            const stripeAlt = z.isSpeculative
+              ? "var(--wait-stripe-alt-a)"
+              : "var(--wait-stripe-alt-b)";
+            const borderColor = z.isSpeculative
+              ? "var(--wait-border-soft)"
+              : "var(--wait-border-strong)";
+            const progressColor = z.isSpeculative
+              ? "var(--wait-progress-spec)"
+              : "var(--wait-progress-solid)";
+            return (
+              <React.Fragment key={z.rank}>
+                {/* Full wait stripe */}
                 <div
+                  className="scout-timeline__wait-zone"
+                  title={`${z.isSpeculative ? "Projected " : ""}${WAIT_TIMES[z.rank]}-month wait for ${z.rank}`}
                   style={{
                     position: "absolute",
                     top: "50%",
                     transform: "translateY(-50%)",
                     left: `${z.start}%`,
-                    width: `${z.nowClamp - z.start}%`,
+                    width: `${z.end - z.start}%`,
                     height: 6,
-                    borderRadius: "3px 0 0 3px",
-                    background: progressColor,
+                    borderRadius: 3,
+                    background: `repeating-linear-gradient(
+                                        -45deg,
+                                        ${stripeColor}, ${stripeColor} 3px,
+                                        ${stripeAlt} 3px, ${stripeAlt} 7px
+                                    )`,
+                    border: `1px solid ${borderColor}`,
                   }}
                 />
-              )}
-            </React.Fragment>
-          );
-        })}
+                {/* Elapsed progress within the wait window */}
+                {z.nowClamp > z.start && (
+                  <div
+                    className="scout-timeline__wait-progress"
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      left: `${z.start}%`,
+                      width: `${z.nowClamp - z.start}%`,
+                      height: 6,
+                      borderRadius: "3px 0 0 3px",
+                      background: progressColor,
+                    }}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
 
-        {/* Birthday markers */}
-        {birthdayMarkers.map((m) => (
-          <div
-            key={m.age}
-            title={`Age ${m.age}`}
-            style={{
-              position: "absolute",
-              left: `${m.percent}%`,
-              top: 4,
-              bottom: "50%",
-              width: 1,
-              background: "rgba(255,255,255,0.15)",
-              transform: "translateX(-50%)",
-              zIndex: 0,
-            }}
-          >
-            <span
+          {/* Birthday markers */}
+          {birthdayMarkers.map((m) => (
+            <div
+              key={m.age}
+              className="scout-timeline__birthday-marker"
+              title={`Age ${m.age}`}
               style={{
                 position: "absolute",
-                bottom: "100%",
-                left: "50%",
+                left: `${m.percent}%`,
+                top: 4,
+                bottom: "50%",
+                width: 1,
+                background: "var(--timeline-marker-line)",
                 transform: "translateX(-50%)",
-                fontSize: "0.6rem",
-                color: "rgba(255,255,255,0.4)",
-                marginBottom: 2,
-                fontWeight: 600,
+                zIndex: 0,
               }}
             >
-              {m.age}
-            </span>
-          </div>
-        ))}
+              <span
+                style={{
+                  position: "absolute",
+                  bottom: "100%",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  fontSize: "0.6rem",
+                  color: "var(--timeline-marker-label)",
+                  marginBottom: 2,
+                  fontWeight: 600,
+                }}
+              >
+                {m.age}
+              </span>
+            </div>
+          ))}
 
-        {/* Solid fill for earned section */}
-        {milestones.filter((m) => m.earned !== null).length > 0 && (
-          <div
-            style={{
-              position: "absolute",
-              top: "50%",
-              transform: "translateY(-50%)",
-              left: 0,
-              width: `${milestones.filter((m) => m.earned !== null).at(-1)?.percent ?? 0}%`,
-              height: 6,
-              borderRadius: 3,
-              background: "linear-gradient(to right, #6366f1, #818cf8)",
-              opacity: 0.85,
-            }}
-          />
-        )}
-
-        {/* Milestone dots */}
-        {milestones.map((m) => {
-          if (m.percent === null) return null;
-          return (
+          {/* Solid fill for earned section */}
+          {milestones.filter((m) => m.earned !== null).length > 0 && (
             <div
-              key={m.rank}
-              title={`${m.rank}${
-                m.earned
+              className="scout-timeline__earned-fill"
+              style={{
+                position: "absolute",
+                top: "50%",
+                transform: "translateY(-50%)",
+                left: 0,
+                width: `${milestones.filter((m) => m.earned !== null).at(-1)?.percent ?? 0}%`,
+                height: 6,
+                borderRadius: 3,
+                background:
+                  "linear-gradient(to right, var(--timeline-accent-start), var(--timeline-accent-end))",
+                opacity: 0.85,
+              }}
+            />
+          )}
+
+          {/* Milestone dots */}
+          {milestones.map((m) => {
+            if (m.percent === null) return null;
+            return (
+              <div
+                key={m.rank}
+                className="scout-timeline__milestone"
+                title={`${m.rank}${m.earned
                   ? ` – earned ${formatDateLabel(m.earned, false)}`
                   : m.projected
                     ? ` – earliest ${formatDateLabel(m.projected, true)}`
                     : ""
-              }`}
-              style={{
-                position: "absolute",
-                left: `${m.percent}%`,
-                top: "50%",
-                transform: "translate(-50%, -50%)",
-                zIndex: 2,
-                fontSize: "1.05rem",
-                lineHeight: 1,
-                opacity: m.earned ? 1 : 0.45,
-                filter: m.projected
-                  ? "grayscale(100%) drop-shadow(0 0 2px rgba(255,255,255,0.1))"
-                  : "drop-shadow(0 0 4px rgba(255,255,255,0.3))",
-              }}
-            >
-              {m.short}
-            </div>
-          );
-        })}
-
-        {/* Today marker */}
-        {nowPercent > 0 && nowPercent < 100 && (
-          <div
-            title="Today"
-            style={{
-              position: "absolute",
-              left: `${nowPercent}%`,
-              top: 0,
-              bottom: 0,
-              width: 2,
-              background: "rgba(255,255,255,0.4)",
-              transform: "translateX(-50%)",
-              borderRadius: 1,
-            }}
-          />
-        )}
-      </div>
-
-      {/* ── Rank Date labels ── */}
-      <div style={{ position: "relative", height: 32, marginTop: 4 }}>
-        {milestones
-          .filter((m) => m.percent !== null)
-          .map((m, index) => {
-            const isProjected = m.projected !== null;
-            return (
-              <span
-                key={m.rank}
+                  }`}
                 style={{
                   position: "absolute",
                   left: `${m.percent}%`,
-                  top: index % 2 === 0 ? 0 : 15,
-                  transform: "translateX(-50%)",
-                  fontSize: "0.68rem",
-                  color: m.earned ? "var(--text-dim)" : "rgba(251,191,36,0.5)",
-                  fontWeight: m.earned ? 600 : 400,
-                  whiteSpace: "nowrap",
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  zIndex: 2,
+                  fontSize: "1.05rem",
+                  lineHeight: 1,
+                  opacity: m.earned ? 1 : 0.45,
+                  filter: m.projected
+                    ? "grayscale(100%) drop-shadow(0 0 2px rgba(255,255,255,0.1))"
+                    : "drop-shadow(0 0 4px rgba(255,255,255,0.3))",
                 }}
               >
-                {m.earned
-                  ? formatDateWithApostrophe(m.earned)
-                  : isProjected
-                    ? `(${formatDateWithApostrophe(m.projected!)})`
-                    : null}
-              </span>
+                {m.short}
+              </div>
             );
           })}
+
+          {/* Today marker */}
+          {nowPercent > 0 && nowPercent < 100 && (
+            <div
+              className="scout-timeline__today"
+              title="Today"
+              style={{
+                position: "absolute",
+                left: `${nowPercent}%`,
+                top: 0,
+                bottom: 0,
+                width: 2,
+                background: "var(--timeline-today)",
+                transform: "translateX(-50%)",
+                borderRadius: 1,
+              }}
+            />
+          )}
+        </div>
+
+        {/* ── Rank Date labels ── */}
+        <div
+          className="scout-rank-axis"
+          style={{ position: "relative", height: 32, marginTop: 4 }}
+        >
+          {milestones
+            .filter((m) => m.percent !== null)
+            .map((m, index) => {
+              const isProjected = m.projected !== null;
+              return (
+                <span
+                  key={m.rank}
+                  className="scout-rank-axis__label"
+                  style={{
+                    position: "absolute",
+                    left: `${m.percent}%`,
+                    top: index % 2 === 0 ? 0 : 15,
+                    transform: "translateX(-50%)",
+                    fontSize: "0.68rem",
+                    color: m.earned ? "var(--text-dim)" : "var(--rank-axis-projected)",
+                    fontWeight: m.earned ? 600 : 400,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {m.earned
+                    ? formatDateWithApostrophe(m.earned)
+                    : isProjected
+                      ? `(${formatDateWithApostrophe(m.projected!)})`
+                      : null}
+                </span>
+              );
+            })}
+        </div>
       </div>
-    </div>
+    </article>
   );
 };

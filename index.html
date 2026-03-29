@@ -6,6 +6,24 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Troop Velocity Tracker</title>
+  <script>
+    (function () {
+      try {
+        var k = "velocity_tracker_theme";
+        var v = localStorage.getItem(k);
+        var p =
+          v === "light" || v === "dark" || v === "system" ? v : "system";
+        var d;
+        if (p === "light") d = "light";
+        else if (p === "dark") d = "dark";
+        else
+          d = window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        document.documentElement.setAttribute("data-theme", d);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>

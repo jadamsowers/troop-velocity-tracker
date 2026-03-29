@@ -171,7 +171,7 @@
 @media (max-width: 480px) {
   /* Hide less essential elements on mobile */
   .scout-age-time,
-  .scout-rank,
+  .scout-rank-pill,
   .scout-status,
   .scout-merit-badges {
     display: none;

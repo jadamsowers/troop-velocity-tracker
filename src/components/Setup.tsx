@@ -121,6 +121,12 @@ export const Setup: React.FC<Props> = ({
     if (token && unitId) {
       auth.setToken(token);
       auth.setUnitId(unitId);
+      const selected = units.find((u) => u.guid === unitId);
+      const label =
+        selected?.name?.trim() ||
+        (selected?.number ? `Troop ${selected.number}` : "") ||
+        "";
+      auth.setUnitLabel(label);
       onComplete();
     }
   };
@@ -132,8 +138,12 @@ export const Setup: React.FC<Props> = ({
   };
 
   return (
-    <div className="setup-form" style={{ maxWidth: "500px", margin: "0 auto" }}>
+    <div
+      className="setup setup-form"
+      style={{ maxWidth: "500px", margin: "0 auto" }}
+    >
       <div
+        className="setup__header"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -141,11 +151,11 @@ export const Setup: React.FC<Props> = ({
           marginBottom: "2rem",
         }}
       >
-        <div style={{ textAlign: "center", flex: 1 }}>
-          <h2 style={{ fontSize: "1.5rem", fontWeight: "600" }}>
+        <div className="setup__intro" style={{ textAlign: "center", flex: 1 }}>
+          <h2 className="setup__title" style={{ fontSize: "1.5rem", fontWeight: "600" }}>
             Connect Scoutbook
           </h2>
-          <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
+          <p className="setup__subtitle" style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
             One-time setup to sync your troop data
           </p>
         </div>
@@ -153,7 +163,7 @@ export const Setup: React.FC<Props> = ({
           <button
             onClick={onClearCache}
             style={{
-              background: "rgba(239, 68, 68, 0.1)",
+              background: "var(--danger-soft-bg)",
               color: "var(--red)",
               border: "1px solid var(--red)",
               padding: "0.5rem 0.75rem",
@@ -170,16 +180,18 @@ export const Setup: React.FC<Props> = ({
         )}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
+      <div className="setup__body" style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
         <section
+          className="setup-section setup-section--login-script"
           style={{
-            background: "rgba(255,255,255,0.03)",
+            background: "var(--setup-section-surface)",
             padding: "1.5rem",
             borderRadius: "1rem",
             border: "1px solid var(--card-border)",
           }}
         >
           <div
+            className="setup-section__heading"
             style={{
               display: "flex",
               alignItems: "center",
@@ -188,7 +200,7 @@ export const Setup: React.FC<Props> = ({
             }}
           >
             <Terminal size={20} color="var(--accent)" />
-            <h3 style={{ fontSize: "1.1rem", fontWeight: "500" }}>
+            <h3 className="setup-section__title" style={{ fontSize: "1.1rem", fontWeight: "500" }}>
               Get your Login Package
             </h3>
           </div>
@@ -205,8 +217,9 @@ export const Setup: React.FC<Props> = ({
             bundle everything you need into your clipboard:
           </p>
           <div
+            className="setup-command-block"
             style={{
-              background: "rgba(0,0,0,0.3)",
+              background: "var(--surface-inset)",
               padding: "0.75rem 1rem",
               borderRadius: "0.75rem",
               border: "1px solid var(--card-border)",
@@ -216,7 +229,10 @@ export const Setup: React.FC<Props> = ({
               marginBottom: "1rem",
             }}
           >
-            <code style={{ fontSize: "0.85rem", color: "#c7d2fe" }}>
+            <code
+              className="setup-command-block__code"
+              style={{ fontSize: "0.85rem", color: "var(--accent-muted)" }}
+            >
               python3 scripts/login_scoutbook.py
             </code>
             <button
@@ -233,7 +249,7 @@ export const Setup: React.FC<Props> = ({
               }}
             >
               {copied ? (
-                <Check size={14} color="#10b981" />
+                <Check size={14} color="var(--green)" />
               ) : (
                 <Copy size={14} />
               )}
@@ -256,8 +272,9 @@ export const Setup: React.FC<Props> = ({
           </p>
         </section>
 
-        <section>
+        <section className="setup-section setup-section--token">
           <div
+            className="setup-section__heading"
             style={{
               display: "flex",
               alignItems: "center",
@@ -266,6 +283,7 @@ export const Setup: React.FC<Props> = ({
             }}
           >
             <div
+              className="setup-step-badge"
               style={{
                 background: "var(--accent)",
                 color: "white",
@@ -281,14 +299,16 @@ export const Setup: React.FC<Props> = ({
             >
               1
             </div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: "500" }}>
+            <h3 className="setup-section__title" style={{ fontSize: "1.1rem", fontWeight: "500" }}>
               Paste Token
             </h3>
           </div>
           <div
+            className="setup-field-group"
             style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
           >
             <input
+              className="setup-token-input"
               type="password"
               placeholder="Paste your token here..."
               value={token}
@@ -296,21 +316,22 @@ export const Setup: React.FC<Props> = ({
               style={{
                 padding: "0.85rem",
                 borderRadius: "0.75rem",
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid var(--card-border)",
-                color: "white",
+                background: "var(--input-bg)",
+                border: "1px solid var(--input-border)",
+                color: "var(--text-main)",
                 fontSize: "0.9rem",
               }}
               autoComplete="off"
             />
             {error && (
               <div
+                className="setup-error"
                 style={{
                   padding: "0.75rem",
                   borderRadius: "0.5rem",
-                  background: "rgba(239, 68, 68, 0.1)",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
-                  color: "#fca5a5",
+                  background: "var(--danger-soft-bg)",
+                  border: "1px solid var(--danger-soft-border)",
+                  color: "var(--danger-soft-text)",
                   fontSize: "0.85rem",
                 }}
               >
@@ -322,6 +343,7 @@ export const Setup: React.FC<Props> = ({
 
         {(units.length > 0 || loadingUnits || (token && token.length > 50)) && (
           <section
+            className="setup-section setup-section--unit"
             style={{
               borderTop: "1px solid var(--card-border)",
               paddingTop: "2.5rem",
@@ -331,9 +353,11 @@ export const Setup: React.FC<Props> = ({
             }}
           >
             <div
+              className="setup-section__heading"
               style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
             >
               <div
+                className="setup-step-badge"
                 style={{
                   background: "var(--accent)",
                   color: "white",
@@ -349,13 +373,14 @@ export const Setup: React.FC<Props> = ({
               >
                 2
               </div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "500" }}>
+              <h3 className="setup-section__title" style={{ fontSize: "1.1rem", fontWeight: "500" }}>
                 Confirm Unit
               </h3>
             </div>
 
             {loadingUnits ? (
               <div
+                className="setup-unit-loading"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -372,23 +397,25 @@ export const Setup: React.FC<Props> = ({
               <>
                 {units.length > 0 ? (
                   <div
+                    className="setup-unit-select-wrap"
                     style={{
                       padding: "0.75rem",
-                      background: "rgba(99, 102, 241, 0.1)",
+                      background: "var(--accent-soft-bg)",
                       borderRadius: "0.75rem",
-                      border: "1px solid rgba(99, 102, 241, 0.2)",
+                      border: "1px solid var(--accent-soft-border)",
                     }}
                   >
                     <select
+                      className="setup-unit-select"
                       value={unitId}
                       onChange={(e) => setUnitId(e.target.value)}
                       style={{
                         width: "100%",
                         padding: "0.75rem",
                         borderRadius: "0.5rem",
-                        background: "rgba(0,0,0,0.2)",
+                        background: "var(--surface-inset)",
                         border: "1px solid var(--card-border)",
-                        color: "white",
+                        color: "var(--text-main)",
                         fontSize: "0.9rem",
                       }}
                     >
@@ -402,6 +429,7 @@ export const Setup: React.FC<Props> = ({
                   </div>
                 ) : (
                   <div
+                    className="setup-unit-manual"
                     style={{
                       display: "flex",
                       flexDirection: "column",
@@ -419,6 +447,7 @@ export const Setup: React.FC<Props> = ({
                       manually:
                     </p>
                     <input
+                      className="setup-unit-guid-input"
                       type="text"
                       placeholder="Paste Unit GUID (e.g., XXXXXXXX-XXXX-XXXX-XXXX-...)"
                       value={unitId}
@@ -427,9 +456,9 @@ export const Setup: React.FC<Props> = ({
                         width: "100%",
                         padding: "0.75rem",
                         borderRadius: "0.5rem",
-                        background: "rgba(0,0,0,0.2)",
+                        background: "var(--surface-inset)",
                         border: "1px solid var(--card-border)",
-                        color: "white",
+                        color: "var(--text-main)",
                         fontSize: "0.8rem",
                       }}
                     />
@@ -449,7 +478,7 @@ export const Setup: React.FC<Props> = ({
               </>
             )}
 
-            <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
+            <div className="setup-section__actions" style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
               {isEditing && onCancel && (
                 <button
                   onClick={onCancel}
@@ -459,9 +488,9 @@ export const Setup: React.FC<Props> = ({
                     padding: "1rem",
                     fontSize: "1rem",
                     fontWeight: "600",
-                    background: "rgba(255,255,255,0.05)",
+                    background: "var(--input-bg)",
                     border: "1px solid var(--card-border)",
-                    color: "white",
+                    color: "var(--text-main)",
                     borderRadius: "0.5rem",
                     cursor: "pointer",
                   }}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "./index.css";
+import "./App.css";
 import { ScoutRow } from "./components/ScoutRow";
 import { Setup } from "./components/Setup";
 import type { ScoutAdvancement } from "./logic/advancement";
@@ -9,6 +10,7 @@ import { scoutingClient } from "./api/scoutingClient";
 import { cacheManager } from "./api/cache";
 import { parseISO, differenceInMonths } from "date-fns";
 import { Rocket, Users, Settings, LogOut, ArrowUpDown } from "lucide-react";
+import { ThemeToggle } from "./theme/ThemeToggle";
 
 function App() {
   const [scouts, setScouts] = useState<any[]>([]);
@@ -190,6 +192,7 @@ function App() {
 
       // Set initial progress
       setLoadingProgress({ current: 0, total: users.length });
+      const totalYouth = users.length;
       await Promise.all(
         users.map(async (youth: any) => {
           const userId = String(youth.userId);
@@ -332,39 +335,21 @@ function App() {
               (r: any) => r.rankName === "Eagle" && r.dateEarned,
             );
             if (hasEagle) {
-              // Still increment progress even if skipped
-              setLoadingProgress((prev) => ({
-                current: prev.current + 1,
-                total: prev.total,
-              }));
               return;
             }
 
-            // Append immediately as data arrives and collect for caching
             allScouts.push(scout);
             setScouts((prev) => {
               const existing = prev.find((s) => s.userId === scout.userId);
-              if (existing) {
-                // Still increment progress even if already exists
-                setLoadingProgress((prev) => ({
-                  current: prev.current + 1,
-                  total: prev.total,
-                }));
-                return prev;
-              }
-              // Increment progress when successfully added
-              setLoadingProgress((prev) => ({
-                current: prev.current + 1,
-                total: prev.total,
-              }));
+              if (existing) return prev;
               return [...prev, scout];
             });
           } catch (err) {
             console.warn(`Failed to load data for ${youth.firstName}`, err);
-            // Increment progress even on error
+          } finally {
             setLoadingProgress((prev) => ({
-              current: prev.current + 1,
-              total: prev.total,
+              current: Math.min(prev.current + 1, totalYouth),
+              total: totalYouth,
             }));
           }
         }),
@@ -398,38 +383,46 @@ function App() {
   };
 
   return (
-    <div className="app-container">
-      <header>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "1rem",
-          }}
-        >
-          <Rocket size={32} color="#818cf8" />
-          <h1>Troop Velocity Tracker</h1>
+    <div className="app-shell app-container">
+      <header className="app-header">
+        <div className="app-header__inner">
+          <div
+            className="app-header__brand"
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "1rem",
+            }}
+          >
+            <Rocket size={24} />
+            <h1>Troop Velocity Tracker</h1>
+          </div>
+          <ThemeToggle />
         </div>
       </header>
 
-      <main>
+      <main className="app-main">
         {!isAuthenticated ? (
-          <Setup onComplete={() => setIsAuthenticated(true)} />
+          <div className="app-view app-view--setup">
+            <Setup onComplete={() => setIsAuthenticated(true)} />
+          </div>
         ) : showSettings ? (
-          <Setup
-            onComplete={() => {
-              setIsAuthenticated(true);
-              setShowSettings(false);
-            }}
-            onCancel={() => setShowSettings(false)}
-            isEditing={true}
-            onClearCache={handleClearCache}
-          />
+          <div className="app-view app-view--setup">
+            <Setup
+              onComplete={() => {
+                setIsAuthenticated(true);
+                setShowSettings(false);
+              }}
+              onCancel={() => setShowSettings(false)}
+              isEditing={true}
+              onClearCache={handleClearCache}
+            />
+          </div>
         ) : (
           <div className="dashboard">
             <div
-              className="filter-header"
+              className="dashboard-toolbar filter-header"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -439,27 +432,21 @@ function App() {
               }}
             >
               <div
+                className="dashboard-toolbar__lead"
                 style={{ display: "flex", alignItems: "center", gap: "1rem" }}
               >
-                <Users size={24} color="#818cf8" />
-                <div>
-                  <h2 style={{ fontSize: "1.5rem", margin: 0 }}>
-                    {(() => {
-                      const unitId = auth.getUnitId();
-                      if (unitId) {
-                        // Extract troop number from unit ID (format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
-                        // The troop number is typically in the first segment
-                        const match = unitId.match(/^(\d{4,})/);
-                        return match
-                          ? `Troop ${match[1]} Status`
-                          : "Troop Status";
-                      }
-                      return "Troop Status";
-                    })()}{" "}
+                <Users size={24} />
+                <div className="dashboard-toolbar__titles">
+                  <h2
+                    className="dashboard-toolbar__title"
+                    style={{ fontSize: "1.5rem", margin: 0 }}
+                  >
+                    {auth.getUnitLabel()?.trim() || "Troop"}{" "}
                     {loading &&
                       `(Loading ${loadingProgress.current}/${loadingProgress.total}…)`}
                   </h2>
                   <p
+                    className="dashboard-toolbar__meta"
                     style={{
                       fontSize: "0.85rem",
                       color: "var(--text-dim)",
@@ -473,22 +460,25 @@ function App() {
                   </p>
                 </div>
               </div>
+
               <div
+                className="dashboard-toolbar__actions"
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  gap: "0.75rem",
-                  alignItems: "flex-end",
+                  gap: "0.5rem",
+                  alignItems: "center",
+                  flexWrap: "wrap",
                 }}
               >
                 <input
+                  className="dashboard-toolbar__search"
                   type="text"
                   placeholder="Filter by name..."
                   value={searchFilter}
                   onChange={(e) => setSearchFilter(e.target.value)}
                   style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid var(--card-border)",
+                    background: "var(--input-bg)",
+                    border: "1px solid var(--input-border)",
                     color: "var(--text-main)",
                     borderRadius: "0.5rem",
                     padding: "0.5rem 0.75rem",
@@ -496,117 +486,120 @@ function App() {
                   }}
                 />
                 <div
+                  className="dashboard-toolbar__sort"
                   style={{
                     display: "flex",
-                    gap: "0.5rem",
                     alignItems: "center",
+                    gap: "0.4rem",
                   }}
                 >
-                  {/* Sort dropdown */}
-                  <div
+                  <ArrowUpDown size={14} />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.4rem",
+                      background: "var(--input-bg)",
+                      border: "1px solid var(--input-border)",
+                      color: "var(--text-main)",
+                      borderRadius: "0.5rem",
+                      padding: "0.5rem 0.75rem",
+                      fontSize: "0.9rem",
+                      cursor: "pointer",
                     }}
                   >
-                    <ArrowUpDown size={14} color="var(--text-dim)" />
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
+                    {SORT_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedScouts.size > 0 && (
+                  <>
+                    <button
+                      onClick={() => setShowComparison(!showComparison)}
                       style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid var(--card-border)",
-                        color: "var(--text-main)",
+                        background: showComparison
+                          ? "var(--accent-ghost-active)"
+                          : "var(--accent-ghost)",
+                        color: "var(--accent)",
+                        border: `1px solid var(--accent)`,
+                        padding: "0.5rem 0.75rem",
                         borderRadius: "0.5rem",
-                        padding: "0.4rem 0.6rem",
-                        fontSize: "0.8rem",
+                        fontSize: "0.9rem",
                         cursor: "pointer",
+                        fontWeight: 600,
                       }}
+                      title={`Compare ${selectedScouts.size} selected scout${selectedScouts.size !== 1 ? "s" : ""}`}
                     >
-                      {SORT_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {selectedScouts.size > 0 && (
-                    <>
+                      {showComparison
+                        ? `Viewing ${selectedScouts.size}`
+                        : `Compare (${selectedScouts.size})`}
+                    </button>
+                    {showComparison && (
                       <button
-                        onClick={() => setShowComparison(!showComparison)}
+                        onClick={() => {
+                          setShowComparison(false);
+                          setSelectedScouts(new Set());
+                        }}
                         style={{
-                          background: showComparison
-                            ? "rgba(99, 102, 241, 0.2)"
-                            : "rgba(99, 102, 241, 0.1)",
-                          color: "var(--accent)",
-                          border: `1px solid var(--accent)`,
-                          padding: "0.4rem 0.75rem",
+                          background: "var(--danger-soft-bg)",
+                          color: "var(--red)",
+                          border: "1px solid var(--red)",
+                          padding: "0.5rem 0.75rem",
                           borderRadius: "0.5rem",
-                          fontSize: "0.8rem",
+                          fontSize: "0.9rem",
                           cursor: "pointer",
                           fontWeight: 600,
                         }}
-                        title={`Compare ${selectedScouts.size} selected scout${selectedScouts.size !== 1 ? "s" : ""}`}
+                        title="Clear comparison"
                       >
-                        {showComparison
-                          ? `Viewing ${selectedScouts.size}`
-                          : `Compare (${selectedScouts.size})`}
+                        Clear
                       </button>
-                      {showComparison && (
-                        <button
-                          onClick={() => {
-                            setShowComparison(false);
-                            setSelectedScouts(new Set());
-                          }}
-                          style={{
-                            background: "rgba(239, 68, 68, 0.1)",
-                            color: "var(--red)",
-                            border: "1px solid var(--red)",
-                            padding: "0.4rem 0.75rem",
-                            borderRadius: "0.5rem",
-                            fontSize: "0.8rem",
-                            cursor: "pointer",
-                            fontWeight: 600,
-                          }}
-                          title="Clear comparison"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </>
-                  )}
-                  <button
-                    style={{
-                      background: "transparent",
-                      border: "1px solid var(--card-border)",
-                      padding: "0.5rem",
-                    }}
-                    onClick={() => setShowSettings(!showSettings)}
-                    title="Settings"
-                  >
-                    <Settings size={20} />
-                  </button>
-                  <button
-                    style={{
-                      background: "rgba(239, 68, 68, 0.1)",
-                      color: "var(--red)",
-                      border: "1px solid var(--red)",
-                      padding: "0.5rem",
-                    }}
-                    onClick={handleLogout}
-                    title="Logout"
-                  >
-                    <LogOut size={20} />
-                  </button>
-                </div>
+                    )}
+                  </>
+                )}
+                <button
+                  style={{
+                    background: "transparent",
+                    border: "1px solid var(--card-border)",
+                    padding: "0.575rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "0.5rem",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setShowSettings(!showSettings)}
+                  title="Settings"
+                >
+                  <Settings size={20} />
+                </button>
+                <button
+                  style={{
+                    background: "var(--danger-soft-bg)",
+                    color: "var(--red)",
+                    border: "1px solid var(--red)",
+                    padding: "0.575rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "0.5rem",
+                    cursor: "pointer",
+                  }}
+                  onClick={handleLogout}
+                  title="Logout"
+                >
+                  <LogOut size={20} />
+                </button>
               </div>
             </div>
 
             {showComparison ? (
               <div
+                className="comparison-panel"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
+                  background: "var(--accent-ghost)",
                   padding: "1.5rem",
                   borderRadius: "1rem",
                   border: "1px solid var(--card-border)",
@@ -614,6 +607,7 @@ function App() {
                 }}
               >
                 <div
+                  className="comparison-panel__header"
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -621,7 +615,10 @@ function App() {
                     marginBottom: "1.5rem",
                   }}
                 >
-                  <h3 style={{ fontSize: "1.2rem", fontWeight: 600 }}>
+                  <h3
+                    className="comparison-panel__title"
+                    style={{ fontSize: "1.2rem", fontWeight: 600 }}
+                  >
                     Comparing {selectedScouts.size} Scout
                     {selectedScouts.size !== 1 ? "s" : ""}
                   </h3>
@@ -631,7 +628,7 @@ function App() {
                       setSelectedScouts(new Set());
                     }}
                     style={{
-                      background: "rgba(255,255,255,0.05)",
+                      background: "var(--input-bg)",
                       border: "1px solid var(--card-border)",
                       padding: "0.5rem 1rem",
                       borderRadius: "0.5rem",
@@ -645,7 +642,7 @@ function App() {
               </div>
             ) : null}
 
-            <div className="content-with-offset">
+            <div className="dashboard-content content-with-offset">
               <div className="scout-list">
                 {filteredScouts.map((scout) => (
                   <ScoutRow
@@ -668,6 +665,7 @@ function App() {
                 ))}
                 {filteredScouts.length === 0 && scouts.length > 0 && (
                   <div
+                    className="scout-list-empty"
                     style={{
                       textAlign: "center",
                       padding: "2rem",
@@ -685,15 +683,18 @@ function App() {
         )}
       </main>
 
-      <footer
-        style={{
-          padding: "2rem",
-          textAlign: "center",
-          color: "#475569",
-          fontSize: "0.8rem",
-        }}
-      >
-        Troop Velocity Tracker &copy; 2026 • Powered by Scoutbook API
+      <footer className="app-footer">
+        <div
+          className="app-footer__inner"
+          style={{
+            padding: "2rem",
+            textAlign: "center",
+            color: "var(--footer-text)",
+            fontSize: "0.8rem",
+          }}
+        >
+          Troop Velocity Tracker &copy; 2026 • Powered by Scoutbook API
+        </div>
       </footer>
     </div>
   );
