@@ -8,8 +8,8 @@
   - [ ] Display scout name
   - [ ] Show age and time remaining
   - [ ] Display rank
-  - [ ] Show status
-  - [ ] Display merit badges
+  - [ ] Show status (middle spaced between left and right content)
+  - [ ] Display merit badges (right justified)
   - [ ] Implement responsive collapse for mobile widths
 - [ ] Change troop status text to troop number display
 
@@ -27,9 +27,9 @@
 
 ## Bug Fixes & Improvements
 
-- [ ] scouts who are 12+ and have no rank yet should be in the yellow condition
-- [ ] any scout who is 17+ and not yet at eagle should be in the red condition
-- [ ] if the API provides nicknames, prefer that name to the actual first name
+- [x] scouts who are 12+ and have no rank yet should be in the yellow condition with a reminder for them to start earning ranks
+- [x] any scout who is 17+ and not yet at eagle should be in the red condition
+- [x] if the API provides nicknames, prefer that name to the actual first name
 
 ---
 *Last updated: 2026-03-29*

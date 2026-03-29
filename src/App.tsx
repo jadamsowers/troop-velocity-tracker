@@ -323,6 +323,7 @@ function App() {
                 earnedMeritBadges,
                 scoutEmail,
                 parentEmails,
+                nickname: youth.nickname || profile?.nickname,
               } as ScoutAdvancement,
             };
 

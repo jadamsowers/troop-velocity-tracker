@@ -14,6 +14,7 @@ export interface ScoutAdvancement {
     earnedMeritBadges: string[];
     scoutEmail?: string;
     parentEmails?: string[];
+    nickname?: string;
 }
 
 export const EAGLE_REQUIRED_BUCKETS = [
@@ -74,6 +75,7 @@ export function getStatus(scout: ScoutAdvancement): Status {
     const now = new Date();
     const dob = parseISO(scout.dob);
     const monthsUntil18 = differenceInMonths(addMonths(dob, 18 * 12), now);
+    const ageYears = differenceInYears(now, dob);
 
     // Sort ranks by order
     const earnedRanks = scout.ranks
@@ -88,7 +90,17 @@ export function getStatus(scout: ScoutAdvancement): Status {
     let ageBasedStatus: Status | null = null;
     if (monthsUntil18 < 13) ageBasedStatus = 'yellow';
 
-    // 2. Life scouts working toward Eagle: check if they have good progress and time
+    // 2. Special case: Scouts who are 12+ and have no rank yet should be in yellow condition
+    if (ageYears >= 12 && earnedRanks.length === 0) {
+        ageBasedStatus = 'yellow';
+    }
+
+    // 3. Special case: Scouts who are 17+ and not yet at eagle should be in red condition
+    if (ageYears >= 17 && currentRank !== 'Eagle') {
+        return 'red';
+    }
+
+    // 4. Life scouts working toward Eagle: check if they have good progress and time
     // If Life rank with good Eagle progress and time left (13+ months), they can be green
     if (currentRank === 'Life' && nextRank === 'Eagle' && monthsUntil18 >= 13) {
         const missingEagleReqs = calculateMissingEagleRequired(scout.earnedMeritBadges);
@@ -99,16 +111,15 @@ export function getStatus(scout: ScoutAdvancement): Status {
         }
     }
 
-    // 3. Velocity check (Assume at least one rank per year)
+    // 5. Velocity check (Assume at least one rank per year)
     if (earnedRanks.length > 0) {
         const lastRankDate = parseISO(earnedRanks[earnedRanks.length - 1].dateEarned!);
         if (differenceInYears(now, lastRankDate) >= 1) {
-            if (ageBasedStatus === 'red') return 'red'; // age is already critical
             return 'yellow';
         }
     }
 
-    // 4. Wait time check
+    // 6. Wait time check
     let isWaitOverdue = false;
     if (nextRank && WAIT_TIMES[nextRank] && earnedRanks.length > 0) {
         const lastRankDate = parseISO(earnedRanks[earnedRanks.length - 1].dateEarned!);
@@ -119,20 +130,18 @@ export function getStatus(scout: ScoutAdvancement): Status {
         if (isAfter(now, eligibilityDate)) {
             isWaitOverdue = true;
             if (isAfter(now, addMonths(eligibilityDate, 3))) {
-                if (ageBasedStatus === 'red') return 'red';
                 return 'yellow'; // 3 months overdue
             }
         }
     }
 
-    // 5. Merit Badge check
-    // Only penalize them for missing merit badges if their mandatory wait period is ALREADY up. 
+    // 7. Merit Badge check
+    // Only penalize them for missing merit badges if their mandatory wait period is ALREADY up.
     // Young/fast scouts shouldn't be penalized for not having merit badges on day 1 of their new rank waiting period.
     if (nextRank && MERIT_BADGE_REQUIREMENTS[nextRank] && isWaitOverdue) {
         const required = MERIT_BADGE_REQUIREMENTS[nextRank];
         if (scout.meritBadgeCount < required - 2) return 'red'; // More than 2 badges short
         if (scout.meritBadgeCount < required) {
-            if (ageBasedStatus === 'red') return 'red';
             return 'yellow'; // Short of required
         }
     }

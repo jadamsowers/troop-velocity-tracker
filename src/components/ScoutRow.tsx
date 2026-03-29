@@ -326,12 +326,20 @@ export const ScoutRow: React.FC<Props> = ({
           <Mail size={14} />
         </button>
 
+        {/* Emoji rank */}
+        <span
+          className="scout-rank-emoji"
+          style={{ fontSize: "1rem", fontWeight: 700, flexShrink: 0 }}
+        >
+          {RANK_SHORT[currentRank] || "⚜️"}
+        </span>
+
         {/* Scout name */}
         <span
           className="scout-name"
           style={{ fontSize: "1rem", fontWeight: 700, flexShrink: 0 }}
         >
-          {firstName} {lastName}
+          {scoutData.nickname || firstName} {lastName}
         </span>
 
         {/* Age and time remaining combined */}
@@ -379,6 +387,9 @@ export const ScoutRow: React.FC<Props> = ({
             color: statusColor,
             whiteSpace: "nowrap",
             flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: "0.25rem",
           }}
         >
           {reason}
