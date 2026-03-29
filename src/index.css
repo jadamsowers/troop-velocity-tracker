@@ -109,7 +109,8 @@ main {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 1rem;
-  padding: 1rem;
+  border-radius: 1rem;
+  padding: 1.25rem;
   backdrop-filter: blur(5px);
   transition: transform 0.2s, border-color 0.2s;
   display: flex;
@@ -132,81 +133,89 @@ main {
 /* Scout card title row: left cluster | centered status | right-justified badges */
 .scout-card-header {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: nowrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
   width: 100%;
-  box-sizing: border-box;
-  margin-bottom: 0.75rem;
-  min-width: 0;
-  overflow: visible;
-  scrollbar-width: thin;
+  margin-bottom: 1rem;
 }
 
-.scout-header-left {
+.scout-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.scout-header-cluster {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  flex: 1 1 0;
-  min-width: 0;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
-/* Only lock controls; age / rank / name participate in shrink (name last). */
-.scout-header-left .scout-checkbox,
-.scout-header-left .scout-email-btn,
-.scout-header-left .scout-rank-emoji-wrap {
-  flex-shrink: 0;
-}
-
-.scout-header-left .scout-name--header {
-  flex: 1 1 40%;
-  /* Strong floor; shrinks only after age/rank (higher flex-shrink) give up space */
-  flex-shrink: 1;
-  min-width: max(8.5rem, 28%);
+.scout-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 1rem;
-  font-weight: 700;
+}
+
+.scout-age {
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  background: var(--input-bg);
+  padding: 0.15rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--input-border);
+  white-space: nowrap;
+}
+
+.scout-merit-badge-subline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+  width: fit-content;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.scout-merit-badge-subline:hover {
   color: var(--text-main);
 }
 
-/* Shrink before the name (higher flex-shrink = yields first) */
-.scout-header-left .scout-age-time {
-  flex: 0 6 auto;
-  min-width: 0;
-  max-width: 12rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.scout-merit-badge-subline__icon {
+  font-size: 1.1rem;
 }
 
-.scout-header-left .scout-rank-pill {
-  flex: 0 6 auto;
-  min-width: 0;
-  max-width: 7rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.scout-header-center {
-  flex: 0 1 28%;
-  max-width: 14rem;
-  min-width: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0 0.25rem;
+.scout-merit-badge-subline__complete-check {
+  color: var(--green);
+  font-weight: 800;
 }
 
 .scout-header-right {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 auto;
+  min-width: fit-content;
 }
 
-.scout-header-right .scout-merit-badges {
-  margin-left: auto;
+.scout-status {
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.75rem;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .scout-checkbox {
@@ -295,43 +304,21 @@ main {
   text-overflow: ellipsis;
 }
 
-.scout-merit-badges {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
 
 @media (max-width: 640px) {
   .scout-card-header {
-    flex-wrap: wrap;
-    row-gap: 0.5rem;
+    flex-direction: column;
     align-items: flex-start;
+    gap: 0.75rem;
   }
 
-  .scout-header-left {
-    order: 1;
-    flex: 1 1 auto;
-    min-width: 0;
-    max-width: 100%;
-    flex-wrap: wrap;
-    row-gap: 0.35rem;
+  .scout-header-main {
+    width: 100%;
   }
 
   .scout-header-right {
-    order: 2;
-    flex: 0 0 auto;
-    margin-left: 0;
-  }
-
-  .scout-header-center {
-    order: 3;
-    flex: 1 1 100%;
-    max-width: 100%;
-    justify-content: center;
-    padding: 0;
-  }
-
-  .scout-header-left .scout-age-time {
-    font-size: 0.75rem;
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 

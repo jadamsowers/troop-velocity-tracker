@@ -261,74 +261,55 @@ export const ScoutRow: React.FC<Props> = ({
       }}
     >
       {/* ── Single-line header: left | centered status | right badges ── */}
+      {/* ── Structured header: Name/Age/MBs on left | Status on right ── */}
       <header className="scout-card-header">
-        <div className="scout-header-left">
-          {userId !== undefined && onSelectChange && (
-            <ScoutSelectCheckbox
-              userId={userId}
-              checked={isSelected}
-              onChange={onSelectChange}
-            />
-          )}
+        <div className="scout-header-main">
+          <div className="scout-header-row">
+            <div className="scout-header-cluster">
+              {userId !== undefined && onSelectChange && (
+                <ScoutSelectCheckbox
+                  userId={userId}
+                  checked={isSelected}
+                  onChange={onSelectChange}
+                />
+              )}
 
-          <button
-            type="button"
-            onClick={draftEmail}
-            title="Draft Progress Report Email"
-            className="scout-email-btn"
-          >
-            <Mail size={14} />
-          </button>
+              <button
+                type="button"
+                onClick={draftEmail}
+                title="Draft Progress Report Email"
+                className="scout-email-btn"
+              >
+                <Mail size={16} />
+              </button>
 
-          <span className="scout-rank-emoji-wrap" aria-hidden>
-            <span className="scout-rank-emoji">
-              {RANK_SHORT[currentRank] || "⚜️"}
-            </span>
-          </span>
+              <span className="scout-rank-emoji-wrap" aria-hidden>
+                <span className="scout-rank-emoji">
+                  {RANK_SHORT[currentRank] || "⚜️"}
+                </span>
+              </span>
 
-          <span className="scout-name scout-name--header">
-            {scoutData.nickname || firstName} {lastName}
-          </span>
+              <span className="scout-name">
+                {scoutData.nickname || firstName} {lastName}
+              </span>
 
-          <span className="scout-age-time">
-            {getAgeString()}
-          </span>
-        </div>
+              <span className="scout-age">{getAgeString()}</span>
+            </div>
+          </div>
 
-        <div className="scout-header-center">
-          <span
-            className="scout-status"
-            style={{
-              background: `${statusColor}20`,
-              border: `1px solid ${statusColor}`,
-              color: statusColor,
-            }}
-          >
-            {reason}
-          </span>
-        </div>
-
-        <div className="scout-header-right">
           <div
-            className="scout-merit-badges"
-            style={{
-              position: "relative",
-              fontSize: "0.75rem",
-              color:
-                totalMissing === 0 ? "var(--success-bright)" : "var(--text-dim)",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.25rem",
-              whiteSpace: "nowrap",
-              cursor: "pointer",
-              userSelect: "none",
-            }}
+            className="scout-merit-badge-subline"
             onClick={() => setShowMbPopover(!showMbPopover)}
           >
-            <span className="scout-merit-badges__icon" style={{ fontSize: "0.9rem" }}>
-              🎖
+            <span className="scout-merit-badge-subline__icon">🎖</span>
+            <span className="scout-merit-badge-subline__text">
+              {21 - totalMissing}/21 required merit badges
             </span>
-            {totalMissing === 0 ? "All 21!" : `${totalMissing} left`}
+            {totalMissing === 0 && (
+              <span className="scout-merit-badge-subline__complete-check">
+                ✓
+              </span>
+            )}
 
             {showMbPopover && totalMissing > 0 && (
               <div
@@ -336,7 +317,7 @@ export const ScoutRow: React.FC<Props> = ({
                 style={{
                   position: "absolute",
                   top: "calc(100% + 10px)",
-                  right: 0,
+                  left: 0, // Since it's now subline under name, left-align it
                   zIndex: 100,
                   padding: "1rem",
                   background: "var(--popover-bg)",
@@ -355,7 +336,7 @@ export const ScoutRow: React.FC<Props> = ({
                   style={{
                     position: "absolute",
                     top: -6,
-                    right: 8,
+                    left: 20, // Arrow follows the new left alignment
                     width: 12,
                     height: 12,
                     background: "var(--popover-bg)",
@@ -378,7 +359,9 @@ export const ScoutRow: React.FC<Props> = ({
                   }}
                 >
                   <span>Missing Eagle Required:</span>
-                  <span style={{ color: "var(--accent-muted)", fontWeight: 400 }}>
+                  <span
+                    style={{ color: "var(--accent-muted)", fontWeight: 400 }}
+                  >
                     {missingEagleReqs.length} left
                   </span>
                 </div>
@@ -392,7 +375,8 @@ export const ScoutRow: React.FC<Props> = ({
                     color: "var(--popover-text)",
                     fontSize: "0.75rem",
                     display: "grid",
-                    gridTemplateColumns: missingEagleReqs.length > 8 ? "1fr 1fr" : "1fr",
+                    gridTemplateColumns:
+                      missingEagleReqs.length > 8 ? "1fr 1fr" : "1fr",
                     gap: "0.35rem 1rem",
                     whiteSpace: "normal",
                   }}
@@ -439,6 +423,19 @@ export const ScoutRow: React.FC<Props> = ({
               </div>
             )}
           </div>
+        </div>
+
+        <div className="scout-header-right">
+          <span
+            className="scout-status"
+            style={{
+              background: `${statusColor}20`,
+              border: `1px solid ${statusColor}`,
+              color: statusColor,
+            }}
+          >
+            {reason}
+          </span>
         </div>
       </header>
 
