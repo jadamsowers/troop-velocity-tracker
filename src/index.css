@@ -87,6 +87,7 @@ h1 {
     var(--h1-gradient-end)
   );
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
