@@ -165,25 +165,6 @@ export const Setup: React.FC<Props> = ({
             One-time setup to sync your troop data
           </p>
         </div>
-        {isEditing && onClearCache && (
-          <button
-            onClick={onClearCache}
-            style={{
-              background: "var(--danger-soft-bg)",
-              color: "var(--red)",
-              border: "1px solid var(--red)",
-              padding: "0.5rem 0.75rem",
-              borderRadius: "0.5rem",
-              fontSize: "0.8rem",
-              cursor: "pointer",
-              fontWeight: 500,
-              whiteSpace: "nowrap",
-            }}
-            title="Clear cached scout data and refresh"
-          >
-            Clear Cache
-          </button>
-        )}
       </div>
 
       <div className="setup__body" style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
@@ -518,6 +499,42 @@ export const Setup: React.FC<Props> = ({
                 {isEditing ? "Save Settings" : "Launch Troop Velocity Tracker"}
               </button>
             </div>
+          </section>
+        )}
+
+        {isEditing && onClearCache && (
+          <section
+            className="setup-section setup-section--cache"
+            style={{
+              borderTop: "1px solid var(--card-border)",
+              paddingTop: "2rem",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "1rem",
+            }}
+          >
+            <p style={{ fontSize: "0.85rem", color: "var(--text-dim)", textAlign: "center" }}>
+              Having trouble with stale data?
+            </p>
+            <button
+              onClick={onClearCache}
+              style={{
+                background: "var(--danger-soft-bg)",
+                color: "var(--red)",
+                border: "1px solid var(--red)",
+                padding: "0.75rem 1.5rem",
+                borderRadius: "0.75rem",
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                fontWeight: 600,
+                width: "100%",
+                transition: "background 0.2s, transform 0.1s",
+              }}
+              title="Clear cached scout data and refresh"
+            >
+              🚀 Clear Cached Data & Refresh
+            </button>
           </section>
         )}
       </div>

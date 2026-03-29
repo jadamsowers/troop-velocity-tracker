@@ -13,6 +13,7 @@
   - [x] Implement responsive collapse for mobile widths
 - [x] Change troop status text to troop number display
 - [x] add a tan oval behind the emoji rank to simulate the insignia patch
+- [x] check to see whether the site adheres to accessibility standards and is easily usable on mobile devices
 
 ## Architectural Changes
 
