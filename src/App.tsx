@@ -1,0 +1,690 @@
+import { useState, useEffect } from "react";
+import "./index.css";
+import { ScoutRow } from "./components/ScoutRow";
+import { Setup } from "./components/Setup";
+import type { ScoutAdvancement } from "./logic/advancement";
+import { getStatus, RANK_ORDER } from "./logic/advancement";
+import { auth } from "./api/auth";
+import { scoutingClient } from "./api/scoutingClient";
+import { cacheManager } from "./api/cache";
+import { parseISO, differenceInMonths } from "date-fns";
+import { Rocket, Users, Settings, LogOut, ArrowUpDown } from "lucide-react";
+
+function App() {
+  const [scouts, setScouts] = useState<any[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    auth.isAuthenticated(),
+  );
+  const [showSettings, setShowSettings] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState({
+    current: 0,
+    total: 0,
+  });
+  const [lastLoadedTime, setLastLoadedTime] = useState<Date | null>(null);
+  const [sortBy, setSortBy] = useState<string>("risk");
+  const [searchFilter, setSearchFilter] = useState("");
+  const [selectedScouts, setSelectedScouts] = useState<Set<number>>(new Set());
+  const [showComparison, setShowComparison] = useState(false);
+  const [filteredOutCount, setFilteredOutCount] = useState(0);
+
+  type SortOption = { value: string; label: string };
+  const SORT_OPTIONS: SortOption[] = [
+    { value: "risk", label: "🚨 Most At-Risk First" },
+    {
+      value: "stagnant_desc",
+      label: "⏱️ Most Stagnant (Time Since Last Rank)",
+    },
+    { value: "last_name", label: "👤 Last Name, First Name" },
+    { value: "first_name", label: "👤 First Name, Last Name" },
+    { value: "age_desc", label: "⏳ Oldest First (Age ↓)" },
+    { value: "age_asc", label: "⏳ Youngest First (Age ↑)" },
+    { value: "rank_desc", label: "⭐ Highest Rank First" },
+    { value: "rank_asc", label: "⭐ Lowest Rank First" },
+  ];
+
+  const STATUS_ORDER = { red: 0, yellow: 1, green: 2 };
+
+  const sortedScouts = [...scouts].sort((a, b) => {
+    switch (sortBy) {
+      case "last_name":
+        return (
+          a.lastName.localeCompare(b.lastName) ||
+          a.firstName.localeCompare(b.firstName)
+        );
+      case "first_name":
+        return (
+          a.firstName.localeCompare(b.firstName) ||
+          a.lastName.localeCompare(b.lastName)
+        );
+      case "risk": {
+        const sa = STATUS_ORDER[getStatus(a.data as ScoutAdvancement)] ?? 2;
+        const sb = STATUS_ORDER[getStatus(b.data as ScoutAdvancement)] ?? 2;
+        return sa - sb || a.lastName.localeCompare(b.lastName);
+      }
+      case "age_desc": {
+        const da = a.data?.dob ? parseISO(a.data.dob).getTime() : 0;
+        const db = b.data?.dob ? parseISO(b.data.dob).getTime() : 0;
+        return da - db; // older DOB = earlier timestamp = first
+      }
+      case "age_asc": {
+        const da = a.data?.dob ? parseISO(a.data.dob).getTime() : 0;
+        const db = b.data?.dob ? parseISO(b.data.dob).getTime() : 0;
+        return db - da;
+      }
+      case "rank_desc": {
+        const ra = RANK_ORDER.indexOf(
+          (a.data as ScoutAdvancement).ranks
+            .filter((r: any) => r.dateEarned)
+            .at(-1)?.rankName ?? "",
+        );
+        const rb = RANK_ORDER.indexOf(
+          (b.data as ScoutAdvancement).ranks
+            .filter((r: any) => r.dateEarned)
+            .at(-1)?.rankName ?? "",
+        );
+        return rb - ra || a.lastName.localeCompare(b.lastName);
+      }
+      case "stagnant_desc": {
+        const getLastRankDate = (s: any) => {
+          const earned = (s.data as ScoutAdvancement).ranks.filter(
+            (r: any) => r.dateEarned,
+          );
+          if (earned.length === 0) return 0; // 0 timestamp places them at the top as most stagnant
+          return Math.max(
+            ...earned.map((r: any) => parseISO(r.dateEarned).getTime()),
+          );
+        };
+        return (
+          getLastRankDate(a) - getLastRankDate(b) ||
+          a.lastName.localeCompare(b.lastName)
+        );
+      }
+      case "rank_asc": {
+        const ra = RANK_ORDER.indexOf(
+          (a.data as ScoutAdvancement).ranks
+            .filter((r: any) => r.dateEarned)
+            .at(-1)?.rankName ?? "",
+        );
+        const rb = RANK_ORDER.indexOf(
+          (b.data as ScoutAdvancement).ranks
+            .filter((r: any) => r.dateEarned)
+            .at(-1)?.rankName ?? "",
+        );
+        return ra - rb || a.lastName.localeCompare(b.lastName);
+      }
+      default:
+        return 0;
+    }
+  });
+
+  // Apply name filter
+  const filteredScouts = sortedScouts.filter((scout) => {
+    const fullName = `${scout.firstName} ${scout.lastName}`.toLowerCase();
+    const matchesName = fullName.includes(searchFilter.toLowerCase());
+    // If in comparison mode, only show selected scouts
+    if (showComparison && selectedScouts.size > 0) {
+      return selectedScouts.has(scout.userId) && matchesName;
+    }
+    return matchesName;
+  });
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setScouts([]); // clear previous data immediately
+      const unitId = auth.getUnitId();
+      if (unitId) {
+        loadData(unitId);
+      }
+    }
+  }, [isAuthenticated]);
+
+  const loadData = async (unitId: string) => {
+    // Check cache first
+    const cachedScouts = cacheManager.get(unitId);
+    if (cachedScouts) {
+      console.log("Loading scouts from cache");
+      setScouts(cachedScouts);
+      const cacheTimestamp = cacheManager.getCacheTimestamp(unitId);
+      setLastLoadedTime(cacheTimestamp);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setLoadingProgress({ current: 0, total: 0 });
+    const allScouts: any[] = [];
+    try {
+      const roster = await scoutingClient.getUnitRoster(unitId);
+      const allRosterUsers = roster.users || [];
+      const now = new Date();
+      const users = allRosterUsers.filter((youth: any) => {
+        // Filter out 18+ scouts
+        if (typeof youth.age === "number" && youth.age >= 18) return false;
+        const dobStr = youth.dateOfBirth || youth.dob;
+        if (dobStr) {
+          if (differenceInMonths(now, parseISO(dobStr)) >= 18 * 12)
+            return false;
+        }
+
+        // Filter out Eagle scouts
+        let currentRank = "";
+        if (youth.lastRankApproved?.rank) {
+          currentRank = youth.lastRankApproved.rank;
+        } else if (
+          Array.isArray(youth.highestRanksAwarded) &&
+          youth.highestRanksAwarded.length > 0
+        ) {
+          currentRank = youth.highestRanksAwarded[0].rank || "";
+        }
+        if (currentRank.includes("Eagle")) return false;
+
+        return true;
+      });
+      setFilteredOutCount(allRosterUsers.length - users.length);
+
+      if (users.length === 0) {
+        console.warn("Roster returned 0 users");
+        return;
+      }
+
+      // Set initial progress
+      setLoadingProgress({ current: 0, total: users.length });
+      await Promise.all(
+        users.map(async (youth: any) => {
+          const userId = String(youth.userId);
+          try {
+            const [ranksRes, mbRes] = await Promise.allSettled([
+              scoutingClient.getRanks(userId),
+              scoutingClient.getMeritBadges(userId),
+            ]);
+
+            const rawRanks =
+              ranksRes.status === "fulfilled" ? ranksRes.value : null;
+            let ranksList: any[] = [];
+            if (rawRanks?.program && Array.isArray(rawRanks.program)) {
+              const scoutsBsa = rawRanks.program.find(
+                (p: any) => p.program === "Scouts BSA",
+              );
+              if (scoutsBsa && Array.isArray(scoutsBsa.ranks)) {
+                ranksList = scoutsBsa.ranks;
+              }
+            }
+
+            const ranks = ranksList.map((r: any) => {
+              let d =
+                r.dateEarned ||
+                r.earnedDate ||
+                r.leaderApprovedDate ||
+                r.markedCompletedDate ||
+                r.awardedDate ||
+                r.completedDate;
+              if (typeof d === "string" && d.trim() === "") d = null;
+
+              // If we still don't have a date but the API explicitly says it's awarded, use today as a fallback so it registers as earned
+              if (!d && (r.awarded === true || r.status === "Awarded")) {
+                d = new Date().toISOString();
+              }
+
+              let name = r.rankName ?? r.name ?? r.rank;
+              if (name === "Star Scout") name = "Star";
+              if (name === "Life Scout") name = "Life";
+              if (name === "Eagle Scout") name = "Eagle";
+
+              return {
+                rankName: name,
+                dateEarned: d,
+              };
+            });
+
+            const mbData = mbRes.status === "fulfilled" ? mbRes.value : null;
+            let mbArray: any[] = [];
+            if (mbData?.program && Array.isArray(mbData.program)) {
+              const scoutsBsa = mbData.program.find(
+                (p: any) => p.program === "Scouts BSA",
+              );
+              if (scoutsBsa && Array.isArray(scoutsBsa.meritBadges))
+                mbArray = scoutsBsa.meritBadges;
+            } else if (Array.isArray(mbData?.meritBadges)) {
+              mbArray = mbData.meritBadges;
+            } else if (Array.isArray(mbData)) {
+              mbArray = mbData;
+            }
+
+            const earnedMeritBadgesObj = mbArray.filter((mb: any) => {
+              const d =
+                mb.dateEarned ||
+                mb.earnedDate ||
+                mb.leaderApprovedDate ||
+                mb.markedCompletedDate ||
+                mb.awardedDate;
+              const hasDate = typeof d === "string" && d.trim() !== "";
+              return (
+                mb.awarded === true ||
+                mb.status === "Awarded" ||
+                mb.percentCompleted === 1 ||
+                hasDate
+              );
+            });
+            const meritBadgeCount = earnedMeritBadgesObj.length;
+            const earnedMeritBadges = earnedMeritBadgesObj.map(
+              (mb: any) => mb.name || mb.meritBadge || "",
+            );
+
+            let dob = youth.dateOfBirth || youth.dob || "";
+            let scoutEmail = youth.email || "";
+            let profile: any = null;
+
+            try {
+              profile = await scoutingClient.getScoutProfile(userId);
+              if (!dob) dob = profile?.dateOfBirth || profile?.dob || "";
+              if (!scoutEmail) scoutEmail = profile?.email || "";
+            } catch {
+              /* ignore */
+            }
+
+            console.log(`API PAYLOADS FOR ${youth.firstName}:`, {
+              youth,
+              profile,
+            });
+
+            let parentEmails: string[] = [];
+            if (youth.parents && Array.isArray(youth.parents)) {
+              youth.parents.forEach((p: any) => {
+                if (p.email) parentEmails.push(p.email);
+              });
+            }
+            if (profile?.parents && Array.isArray(profile.parents)) {
+              profile.parents.forEach((p: any) => {
+                if (p.email) parentEmails.push(p.email);
+              });
+            }
+            if (profile?.connections && Array.isArray(profile.connections)) {
+              profile.connections.forEach((c: any) => {
+                if (c.isParent && c.email) parentEmails.push(c.email);
+              });
+            }
+
+            // deduplicate parent emails
+            parentEmails = Array.from(
+              new Set(
+                parentEmails.filter(Boolean).map((e) => e.trim().toLowerCase()),
+              ),
+            );
+
+            const scout = {
+              userId: youth.userId,
+              firstName: youth.firstName,
+              lastName: youth.lastName,
+              data: {
+                dob,
+                ranks,
+                meritBadgeCount,
+                earnedMeritBadges,
+                scoutEmail,
+                parentEmails,
+              } as ScoutAdvancement,
+            };
+
+            // Catch any scouts whose unit roster was out-of-date, but their actual API shows they are Eagle
+            const hasEagle = ranks.some(
+              (r: any) => r.rankName === "Eagle" && r.dateEarned,
+            );
+            if (hasEagle) {
+              // Still increment progress even if skipped
+              setLoadingProgress((prev) => ({
+                current: prev.current + 1,
+                total: prev.total,
+              }));
+              return;
+            }
+
+            // Append immediately as data arrives and collect for caching
+            allScouts.push(scout);
+            setScouts((prev) => {
+              const existing = prev.find((s) => s.userId === scout.userId);
+              if (existing) {
+                // Still increment progress even if already exists
+                setLoadingProgress((prev) => ({
+                  current: prev.current + 1,
+                  total: prev.total,
+                }));
+                return prev;
+              }
+              // Increment progress when successfully added
+              setLoadingProgress((prev) => ({
+                current: prev.current + 1,
+                total: prev.total,
+              }));
+              return [...prev, scout];
+            });
+          } catch (err) {
+            console.warn(`Failed to load data for ${youth.firstName}`, err);
+            // Increment progress even on error
+            setLoadingProgress((prev) => ({
+              current: prev.current + 1,
+              total: prev.total,
+            }));
+          }
+        }),
+      );
+    } catch (err) {
+      console.error("Failed to load roster:", err);
+    } finally {
+      // Cache the scouts if we loaded any
+      if (allScouts.length > 0) {
+        cacheManager.set(unitId, allScouts);
+        setLastLoadedTime(new Date());
+      }
+      setLoading(false);
+      setLoadingProgress({ current: 0, total: 0 });
+    }
+  };
+
+  const handleLogout = () => {
+    auth.logout();
+    setIsAuthenticated(false);
+    setScouts([]);
+  };
+
+  const handleClearCache = () => {
+    cacheManager.clear();
+    setScouts([]);
+    const unitId = auth.getUnitId();
+    if (unitId) {
+      loadData(unitId);
+    }
+  };
+
+  return (
+    <div className="app-container">
+      <header>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "1rem",
+          }}
+        >
+          <Rocket size={32} color="#818cf8" />
+          <h1>Troop Velocity Tracker</h1>
+        </div>
+      </header>
+
+      <main>
+        {!isAuthenticated ? (
+          <Setup onComplete={() => setIsAuthenticated(true)} />
+        ) : showSettings ? (
+          <Setup
+            onComplete={() => {
+              setIsAuthenticated(true);
+              setShowSettings(false);
+            }}
+            onCancel={() => setShowSettings(false)}
+            isEditing={true}
+            onClearCache={handleClearCache}
+          />
+        ) : (
+          <div className="dashboard">
+            <div
+              className="filter-header"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+              }}
+            >
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "1rem" }}
+              >
+                <Users size={24} color="#818cf8" />
+                <div>
+                  <h2 style={{ fontSize: "1.5rem", margin: 0 }}>
+                    Troop Status{" "}
+                    {loading &&
+                      `(Loading ${loadingProgress.current}/${loadingProgress.total}…)`}
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "var(--text-dim)",
+                      margin: "0.25rem 0 0 0",
+                    }}
+                  >
+                    Displaying {filteredScouts.length}/{scouts.length} scouts
+                    {filteredOutCount > 0 && ` (${filteredOutCount} filtered)`}
+                    {lastLoadedTime &&
+                      ` • Last updated ${lastLoadedTime.toLocaleTimeString()}`}
+                  </p>
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                  alignItems: "flex-end",
+                }}
+              >
+                <input
+                  type="text"
+                  placeholder="Filter by name..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid var(--card-border)",
+                    color: "var(--text-main)",
+                    borderRadius: "0.5rem",
+                    padding: "0.5rem 0.75rem",
+                    fontSize: "0.9rem",
+                  }}
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    alignItems: "center",
+                  }}
+                >
+                  {/* Sort dropdown */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.4rem",
+                    }}
+                  >
+                    <ArrowUpDown size={14} color="var(--text-dim)" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid var(--card-border)",
+                        color: "var(--text-main)",
+                        borderRadius: "0.5rem",
+                        padding: "0.4rem 0.6rem",
+                        fontSize: "0.8rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {SORT_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {selectedScouts.size > 0 && (
+                    <>
+                      <button
+                        onClick={() => setShowComparison(!showComparison)}
+                        style={{
+                          background: showComparison
+                            ? "rgba(99, 102, 241, 0.2)"
+                            : "rgba(99, 102, 241, 0.1)",
+                          color: "var(--accent)",
+                          border: `1px solid var(--accent)`,
+                          padding: "0.4rem 0.75rem",
+                          borderRadius: "0.5rem",
+                          fontSize: "0.8rem",
+                          cursor: "pointer",
+                          fontWeight: 600,
+                        }}
+                        title={`Compare ${selectedScouts.size} selected scout${selectedScouts.size !== 1 ? "s" : ""}`}
+                      >
+                        {showComparison
+                          ? `Viewing ${selectedScouts.size}`
+                          : `Compare (${selectedScouts.size})`}
+                      </button>
+                      {showComparison && (
+                        <button
+                          onClick={() => {
+                            setShowComparison(false);
+                            setSelectedScouts(new Set());
+                          }}
+                          style={{
+                            background: "rgba(239, 68, 68, 0.1)",
+                            color: "var(--red)",
+                            border: "1px solid var(--red)",
+                            padding: "0.4rem 0.75rem",
+                            borderRadius: "0.5rem",
+                            fontSize: "0.8rem",
+                            cursor: "pointer",
+                            fontWeight: 600,
+                          }}
+                          title="Clear comparison"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </>
+                  )}
+                  <button
+                    style={{
+                      background: "transparent",
+                      border: "1px solid var(--card-border)",
+                      padding: "0.5rem",
+                    }}
+                    onClick={() => setShowSettings(!showSettings)}
+                    title="Settings"
+                  >
+                    <Settings size={20} />
+                  </button>
+                  <button
+                    style={{
+                      background: "rgba(239, 68, 68, 0.1)",
+                      color: "var(--red)",
+                      border: "1px solid var(--red)",
+                      padding: "0.5rem",
+                    }}
+                    onClick={handleLogout}
+                    title="Logout"
+                  >
+                    <LogOut size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {showComparison ? (
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  padding: "1.5rem",
+                  borderRadius: "1rem",
+                  border: "1px solid var(--card-border)",
+                  marginBottom: "2rem",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "1.5rem",
+                  }}
+                >
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: 600 }}>
+                    Comparing {selectedScouts.size} Scout
+                    {selectedScouts.size !== 1 ? "s" : ""}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowComparison(false);
+                      setSelectedScouts(new Set());
+                    }}
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid var(--card-border)",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "0.5rem",
+                      cursor: "pointer",
+                      color: "var(--text-main)",
+                    }}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="content-with-offset">
+              <div className="scout-list">
+                {filteredScouts.map((scout) => (
+                  <ScoutRow
+                    key={scout.userId}
+                    userId={scout.userId}
+                    firstName={scout.firstName}
+                    lastName={scout.lastName}
+                    scoutData={scout.data as ScoutAdvancement}
+                    isSelected={selectedScouts.has(scout.userId)}
+                    onSelectChange={(userId, selected) => {
+                      const newSelected = new Set(selectedScouts);
+                      if (selected) {
+                        newSelected.add(userId);
+                      } else {
+                        newSelected.delete(userId);
+                      }
+                      setSelectedScouts(newSelected);
+                    }}
+                  />
+                ))}
+                {filteredScouts.length === 0 && scouts.length > 0 && (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "2rem",
+                      color: "var(--text-dim)",
+                    }}
+                  >
+                    {showComparison
+                      ? "No selected scouts to compare"
+                      : `No scouts match "${searchFilter}"`}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <footer
+        style={{
+          padding: "2rem",
+          textAlign: "center",
+          color: "#475569",
+          fontSize: "0.8rem",
+        }}
+      >
+        Troop Velocity Tracker &copy; 2026 • Powered by Scoutbook API
+      </footer>
+    </div>
+  );
+}
+
+export default App;
