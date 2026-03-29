@@ -167,7 +167,8 @@ def main():
         # Package for Smart Paste
         result = json.dumps({
             "token": token,
-            "unitId": selected_unit['guid']
+            "unitId": selected_unit['guid'],
+            "unitName": selected_unit['name']
         })
         
         if copy_to_clipboard(result):

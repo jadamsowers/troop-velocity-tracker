@@ -29,6 +29,7 @@ export const Setup: React.FC<Props> = ({
   const [loadingUnits, setLoadingUnits] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string>("");
+  const [pastedUnitLabel, setPastedUnitLabel] = useState("");
 
   useEffect(() => {
     if (token && token.split(".").length === 3) {
@@ -46,6 +47,9 @@ export const Setup: React.FC<Props> = ({
           setToken(parsed.token);
           if (parsed.unitId) {
             setUnitId(parsed.unitId);
+          }
+          if (parsed.unitName || parsed.unitLabel) {
+            setPastedUnitLabel(parsed.unitName || parsed.unitLabel);
           }
           setError("");
           return;
@@ -124,8 +128,10 @@ export const Setup: React.FC<Props> = ({
       const selected = units.find((u) => u.guid === unitId);
       const label =
         selected?.name?.trim() ||
+        pastedUnitLabel ||
         (selected?.number ? `Troop ${selected.number}` : "") ||
-        "";
+        (unitId.length > 20 ? `Unit ${unitId.slice(0, 8)}...` : unitId) ||
+        "Troop";
       auth.setUnitLabel(label);
       onComplete();
     }
