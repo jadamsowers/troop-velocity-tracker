@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Check, Loader2, Terminal, Copy } from "lucide-react";
+import { Check, Loader2, Terminal, Copy, LogIn, AlertCircle } from "lucide-react";
 import { auth } from "../api/auth";
 import { scoutingClient } from "../api/scoutingClient";
 
@@ -30,6 +30,8 @@ export const Setup: React.FC<Props> = ({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string>("");
   const [pastedUnitLabel, setPastedUnitLabel] = useState("");
+  const [browserLoginLoading, setBrowserLoginLoading] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(false);
 
   useEffect(() => {
     if (token && token.split(".").length === 3) {
@@ -143,6 +145,36 @@ export const Setup: React.FC<Props> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleBrowserLogin = async () => {
+    setBrowserLoginLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/login", { method: "POST" });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Login failed");
+        return;
+      }
+
+      setToken(data.token);
+      auth.setToken(data.token);
+
+      if (data.units?.length > 0) {
+        setUnits(data.units);
+        if (data.units.length === 1) {
+          setUnitId(data.units[0].guid);
+        }
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Failed to connect to login service",
+      );
+    } finally {
+      setBrowserLoginLoading(false);
+    }
+  };
+
   return (
     <div
       className="setup setup-form"
@@ -169,12 +201,16 @@ export const Setup: React.FC<Props> = ({
 
       <div className="setup__body" style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
         <section
-          className="setup-section setup-section--login-script"
+          className="setup-section setup-section--browser-login"
           style={{
             background: "var(--setup-section-surface)",
             padding: "1.5rem",
             borderRadius: "1rem",
             border: "1px solid var(--card-border)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "1.25rem",
           }}
         >
           <div
@@ -183,149 +219,181 @@ export const Setup: React.FC<Props> = ({
               display: "flex",
               alignItems: "center",
               gap: "0.75rem",
-              marginBottom: "1.25rem",
             }}
           >
-            <Terminal size={20} color="var(--accent)" />
+            <LogIn size={20} color="var(--accent)" />
             <h3 className="setup-section__title" style={{ fontSize: "1.1rem", fontWeight: "500" }}>
-              Get your Login Package
+              Sign in with Scoutbook
             </h3>
           </div>
           <p
             style={{
               fontSize: "0.9rem",
               color: "var(--text-dim)",
-              marginBottom: "1.25rem",
+              textAlign: "center",
               lineHeight: "1.6",
+              maxWidth: "380px",
             }}
           >
-            Run this command to log in and{" "}
-            <b>select your unit in the terminal</b>. It will automatically
-            bundle everything you need into your clipboard:
+            Opens a browser window where you sign in to your Scouting account.
+            Your token and unit are captured automatically.
           </p>
-          <div
-            className="setup-command-block"
+          <button
+            onClick={handleBrowserLogin}
+            disabled={browserLoginLoading}
+            className="button-primary"
             style={{
-              background: "var(--surface-inset)",
-              padding: "0.75rem 1rem",
-              borderRadius: "0.75rem",
-              border: "1px solid var(--card-border)",
+              padding: "0.85rem 2rem",
+              fontSize: "1rem",
+              fontWeight: "600",
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "1rem",
+              gap: "0.6rem",
+              width: "100%",
+              justifyContent: "center",
             }}
           >
-            <code
-              className="setup-command-block__code"
-              style={{ fontSize: "0.85rem", color: "var(--accent-muted)" }}
-            >
-              python3 scripts/login_scoutbook.py
-            </code>
-            <button
-              onClick={handleCopyCommand}
+            {browserLoginLoading ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Waiting for login…
+              </>
+            ) : (
+              <>
+                <LogIn size={18} />
+                Login with Scoutbook
+              </>
+            )}
+          </button>
+          {browserLoginLoading && (
+            <p
               style={{
-                background: "none",
-                border: "none",
+                fontSize: "0.8rem",
                 color: "var(--text-dim)",
-                cursor: "pointer",
+                textAlign: "center",
+                fontStyle: "italic",
+              }}
+            >
+              A browser window should have opened. Sign in there, then come back here.
+            </p>
+          )}
+
+          {error && (
+            <div
+              className="setup-error"
+              style={{
+                padding: "0.75rem",
+                borderRadius: "0.5rem",
+                background: "var(--danger-soft-bg)",
+                border: "1px solid var(--danger-soft-border)",
+                color: "var(--danger-soft-text)",
+                fontSize: "0.85rem",
+                width: "100%",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
-                fontSize: "0.75rem",
               }}
             >
-              {copied ? (
-                <Check size={14} color="var(--green)" />
-              ) : (
-                <Copy size={14} />
-              )}
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-          <p
-            style={{
-              fontSize: "0.75rem",
-              color: "var(--text-dim)",
-              fontStyle: "italic",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
-          >
-            <Loader2 className="animate-pulse" size={12} /> Requires{" "}
-            <code>playwright</code>, <code>chromium</code>, and{" "}
-            <code>requests</code>
-          </p>
-        </section>
-
-        <section className="setup-section setup-section--token">
-          <div
-            className="setup-section__heading"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              marginBottom: "1.25rem",
-            }}
-          >
-            <div
-              className="setup-step-badge"
-              style={{
-                background: "var(--accent)",
-                color: "white",
-                width: "24px",
-                height: "24px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: "bold",
-                fontSize: "14px",
-              }}
-            >
-              1
+              <AlertCircle size={16} />
+              {error}
             </div>
-            <h3 className="setup-section__title" style={{ fontSize: "1.1rem", fontWeight: "500" }}>
-              Paste Token
-            </h3>
-          </div>
-          <div
-            className="setup-field-group"
-            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+          )}
+
+          <button
+            onClick={() => setShowManualEntry(!showManualEntry)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--text-dim)",
+              cursor: "pointer",
+              fontSize: "0.8rem",
+              textDecoration: "underline",
+              padding: "0.25rem",
+            }}
           >
-            <input
-              className="setup-token-input"
-              type="password"
-              placeholder="Paste your token here..."
-              value={token}
-              onChange={(e) => handleTokenChange(e.target.value)}
+            {showManualEntry ? "Hide manual entry" : "Paste token manually instead"}
+          </button>
+
+          {showManualEntry && (
+            <div
+              className="setup-manual-entry"
               style={{
-                padding: "0.85rem",
-                borderRadius: "0.75rem",
-                background: "var(--input-bg)",
-                border: "1px solid var(--input-border)",
-                color: "var(--text-main)",
-                fontSize: "0.9rem",
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                gap: "1rem",
+                borderTop: "1px solid var(--card-border)",
+                paddingTop: "1.25rem",
               }}
-              autoComplete="off"
-            />
-            {error && (
+            >
               <div
-                className="setup-error"
+                className="setup-section__heading"
                 style={{
-                  padding: "0.75rem",
-                  borderRadius: "0.5rem",
-                  background: "var(--danger-soft-bg)",
-                  border: "1px solid var(--danger-soft-border)",
-                  color: "var(--danger-soft-text)",
-                  fontSize: "0.85rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                  marginBottom: "0.5rem",
                 }}
               >
-                {error}
+                <Terminal size={16} color="var(--text-dim)" />
+                <h4 style={{ fontSize: "0.95rem", fontWeight: "500", margin: 0 }}>
+                  Manual Token Entry
+                </h4>
               </div>
-            )}
-          </div>
+              <p
+                style={{
+                  fontSize: "0.8rem",
+                  color: "var(--text-dim)",
+                  lineHeight: "1.5",
+                }}
+              >
+                You can also run{" "}
+                <code
+                  style={{
+                    background: "var(--surface-inset)",
+                    padding: "0.15rem 0.4rem",
+                    borderRadius: "0.25rem",
+                    fontSize: "0.8rem",
+                  }}
+                >
+                  python3 scripts/login_scoutbook.py
+                </code>{" "}
+                <button
+                  onClick={handleCopyCommand}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--accent-muted)",
+                    cursor: "pointer",
+                    padding: 0,
+                    fontSize: "0.75rem",
+                    verticalAlign: "middle",
+                  }}
+                >
+                  {copied ? <Check size={12} color="var(--green)" /> : <Copy size={12} />}
+                </button>{" "}
+                and paste the result below:
+              </p>
+              <input
+                className="setup-token-input"
+                type="password"
+                placeholder="Paste token or JSON login package..."
+                value={token}
+                onChange={(e) => handleTokenChange(e.target.value)}
+                style={{
+                  padding: "0.85rem",
+                  borderRadius: "0.75rem",
+                  background: "var(--input-bg)",
+                  border: "1px solid var(--input-border)",
+                  color: "var(--text-main)",
+                  fontSize: "0.9rem",
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}
+                autoComplete="off"
+              />
+            </div>
+          )}
         </section>
 
         {(units.length > 0 || loadingUnits || (token && token.length > 50)) && (

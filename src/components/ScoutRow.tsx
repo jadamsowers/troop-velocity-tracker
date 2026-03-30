@@ -68,8 +68,6 @@ export const ScoutRow: React.FC<Props> = ({
   const now = new Date();
   const dob = scoutData.dob ? parseISO(scoutData.dob) : null;
   const birthday18 = dob ? addMonths(dob, 18 * 12) : null;
-  const monthsUntil18 = birthday18 ? differenceInMonths(birthday18, now) : null;
-
   const earnedRanks = scoutData.ranks
     .filter((r) => r.dateEarned)
     .sort(
