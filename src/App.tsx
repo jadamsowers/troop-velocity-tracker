@@ -493,7 +493,8 @@ function App() {
                     border: "1px solid var(--input-border)",
                     color: "var(--text-main)",
                     borderRadius: "0.5rem",
-                    padding: "0.6rem 0.75rem",
+                    padding: "0 0.75rem",
+                    height: "40px",
                     fontSize: "0.95rem",
                   }}
                 />
@@ -518,7 +519,8 @@ function App() {
                       border: "1px solid var(--input-border)",
                       color: "var(--text-main)",
                       borderRadius: "0.5rem",
-                      padding: "0.6rem 0.75rem",
+                      padding: "0 0.75rem",
+                      height: "40px",
                       fontSize: "0.95rem",
                       cursor: "pointer",
                     }}

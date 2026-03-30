@@ -1,133 +1,186 @@
-/* ── Scouting America / BSA brand tokens (see src/theme/bsaPalette.ts) ── */
+:root {
+  /* BSA Core Brand Colors */
+  --brand-red: #CE1126;
+  --brand-blue: #003F87;
+  --brand-tan: #D6CEBD;
+  --brand-grey: #515354;
+}
+
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  /* Neutrals & surfaces */
-  --bg-color: #0b1d2e;
-  --card-bg: rgba(255, 255, 255, 0.05);
-  --card-border: rgba(154, 179, 213, 0.12);
-  --text-main: #f8fafc;
-  --text-dim: #9ab3d5;
-  --text-muted: #64748b;
-  /* Status (brand red / yellow / green) */
-  --green: #006b3f;
-  --yellow: #fcd116;
-  --red: #ce1126;
-  /* Primary UI = Dark Blue; screen variant for dark bg */
-  --accent: #4a9fe8;
-  --accent-muted: #9ab3d5;
-  --accent-soft-bg: rgba(0, 63, 135, 0.28);
-  --accent-soft-border: rgba(74, 159, 232, 0.45);
-  --accent-ghost: color-mix(in srgb, var(--accent) 14%, transparent);
-  --accent-ghost-active: color-mix(in srgb, var(--accent) 26%, transparent);
-  --header-bg: rgba(10, 25, 42, 0.92);
-  --header-border: rgba(154, 179, 213, 0.12);
-  --h1-gradient-start: #003f87;
-  --h1-gradient-end: #006b3f;
-  --input-bg: rgba(255, 255, 255, 0.06);
-  --input-border: rgba(154, 179, 213, 0.15);
-  --toolbar-gradient-fade: rgba(11, 29, 46, 0.92);
-  --icon-accent: #4a9fe8;
-  --footer-text: #9ab3d5;
-  --popover-bg: #0f1f2e;
-  --popover-border: rgba(154, 179, 213, 0.14);
-  --popover-title: #f8fafc;
-  --popover-text: #9ab3d5;
-  --success-bright: #2dd48f;
-  --shadow-popover: 0 10px 25px -5px rgba(0, 0, 0, 0.45);
-  /* Cards tinted by status */
-  --card-tint-red: rgba(206, 17, 38, 0.15);
-  --card-tint-yellow: rgba(252, 209, 22, 0.15);
+  
+  /* Backgrounds: Deep black mixed heavily with Brand Blue for a premium "midnight" look */
+  --bg-color: color-mix(in srgb, var(--brand-blue) 12%, #0A0A0B);
+  --card-bg: color-mix(in srgb, var(--brand-blue) 18%, #111213);
+  
+  /* Borders: A subtle hint of Brand Grey for dark backgrounds */
+  --card-border: rgba(255, 255, 255, 0.08);
+
+  /* Typography */
+  --text-main: #FFFFFF;
+  --text-dim: color-mix(in srgb, var(--brand-tan) 65%, #FFFFFF);
+  --text-muted: color-mix(in srgb, var(--brand-grey) 45%, #B0B0B0);
+
+  /* Status Colors: Brightened for dark mode accessibility */
+  --green: #4ADE80;
+  --yellow: #FACC15;
+  --red: #FF7682; /* Brightened Brand Red */
+
+  /* UI Accents: Brightened Brand Blue */
+  --accent: #5DA4EB; 
+  --accent-muted: var(--text-dim);
+  --accent-soft-bg: rgba(93, 164, 235, 0.15);
+  --accent-soft-border: rgba(93, 164, 235, 0.35);
+  --accent-ghost: rgba(93, 164, 235, 0.1);
+  --accent-ghost-active: rgba(93, 164, 235, 0.2);
+
+  /* Structural Elements */
+  --header-bg: color-mix(in srgb, var(--brand-blue) 15%, rgba(10, 10, 11, 0.95));
+  --header-border: rgba(255, 255, 255, 0.08);
+  
+  --h1-gradient-start: #5DA4EB;
+  --h1-gradient-end: #8ABFF2; /* Soft blue shift instead of clashing red */
+
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --input-border: rgba(255, 255, 255, 0.16);
+  --toolbar-gradient-fade: color-mix(in srgb, var(--brand-blue) 12%, rgba(10, 10, 11, 0.95));
+
+  --icon-accent: #5DA4EB;
+  --footer-text: var(--text-muted);
+
+  --popover-bg: color-mix(in srgb, var(--brand-blue) 22%, #18191A);
+  --popover-border: rgba(255, 255, 255, 0.12);
+  --popover-title: #FFFFFF;
+  --popover-text: var(--text-dim);
+  
+  --success-bright: #4ADE80;
+  --shadow-popover: 0 12px 30px -5px rgba(0, 0, 0, 0.6);
+
+  /* Status Tints */
+  --card-tint-red: rgba(255, 118, 130, 0.12);
+  --card-tint-yellow: rgba(250, 204, 21, 0.12);
+
   /* Timeline */
-  --timeline-track-bg: rgba(255, 255, 255, 0.07);
-  --timeline-accent-start: #003f87;
-  --timeline-accent-end: #006b3f;
-  --timeline-today: rgba(252, 209, 22, 0.55);
-  --timeline-marker-line: rgba(255, 255, 255, 0.16);
-  --timeline-marker-label: rgba(255, 255, 255, 0.42);
-  --timeline-prejoin-stripe: rgba(255, 255, 255, 0.1);
-  --timeline-prejoin-border: rgba(255, 255, 255, 0.12);
-  /* Wait zones (yellow = BSA Yellow) */
-  --wait-stripe-a: rgba(252, 209, 22, 0.22);
-  --wait-stripe-b: rgba(252, 209, 22, 0.42);
-  --wait-stripe-alt-a: rgba(252, 209, 22, 0.06);
-  --wait-stripe-alt-b: rgba(252, 209, 22, 0.1);
-  --wait-border-strong: rgba(252, 209, 22, 0.32);
-  --wait-border-soft: rgba(252, 209, 22, 0.14);
-  --wait-progress-spec: rgba(0, 63, 135, 0.28);
-  --wait-progress-solid: rgba(0, 63, 135, 0.58);
-  --rank-axis-projected: rgba(252, 209, 22, 0.55);
-  /* Buttons / danger soft */
-  --danger-soft-bg: rgba(206, 17, 38, 0.12);
-  --danger-soft-border: rgba(206, 17, 38, 0.35);
-  --danger-soft-text: #fca5a5;
-  /* Rank patch oval (tan family) */
-  --patch-tan-1: #e8d4b8;
-  --patch-tan-2: #d4b896;
-  --patch-tan-3: #b39475;
-  --patch-tan-4: #8f6848;
-  --surface-inset: rgba(0, 0, 0, 0.35);
-  --setup-section-surface: color-mix(in srgb, var(--accent) 7%, transparent);
+  --timeline-track-bg: rgba(255, 255, 255, 0.06);
+  --timeline-accent-start: #5DA4EB;
+  --timeline-accent-end: #FF7682;
+  --timeline-today: var(--text-dim);
+  --timeline-marker-line: rgba(255, 255, 255, 0.15);
+  --timeline-marker-label: rgba(255, 255, 255, 0.45);
+  --timeline-prejoin-stripe: rgba(255, 255, 255, 0.04);
+  --timeline-prejoin-border: rgba(255, 255, 255, 0.08);
+
+  /* Wait zones */
+  --wait-stripe-a: rgba(250, 204, 21, 0.18);
+  --wait-stripe-b: rgba(250, 204, 21, 0.35);
+  --wait-stripe-alt-a: rgba(250, 204, 21, 0.05);
+  --wait-stripe-alt-b: rgba(250, 204, 21, 0.1);
+  --wait-border-strong: rgba(250, 204, 21, 0.3);
+  --wait-border-soft: rgba(250, 204, 21, 0.12);
+  --wait-progress-spec: rgba(93, 164, 235, 0.25);
+  --wait-progress-solid: rgba(93, 164, 235, 0.55);
+  --rank-axis-projected: rgba(250, 204, 21, 0.65);
+
+  --danger-soft-bg: rgba(255, 118, 130, 0.15);
+  --danger-soft-border: rgba(255, 118, 130, 0.35);
+  --danger-soft-text: #FF7682;
+
+  /* Patches */
+  --patch-tan-1: var(--brand-tan);
+  --patch-tan-2: color-mix(in srgb, var(--brand-tan) 80%, black);
+  --patch-tan-3: color-mix(in srgb, var(--brand-tan) 60%, black);
+  --patch-tan-4: color-mix(in srgb, var(--brand-tan) 40%, black);
+
+  --surface-inset: rgba(255, 255, 255, 0.05);
+  --setup-section-surface: rgba(255, 255, 255, 0.03);
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg-color: #d6cebd;
-  --card-bg: rgba(255, 255, 255, 0.94);
-  --card-border: rgba(81, 83, 84, 0.18);
-  --text-main: #243e2c;
-  --text-dim: #515354;
-  --text-muted: #64748b;
-  --green: #006b3f;
-  --yellow: #c9a000;
-  --red: #ce1126;
-  --accent: #003f87;
-  --accent-muted: #003f87;
-  --accent-soft-bg: rgba(0, 63, 135, 0.1);
-  --accent-soft-border: rgba(0, 63, 135, 0.35);
-  --accent-ghost: color-mix(in srgb, var(--accent) 10%, transparent);
-  --accent-ghost-active: color-mix(in srgb, var(--accent) 18%, transparent);
-  --header-bg: rgba(255, 255, 255, 0.94);
-  --header-border: rgba(81, 83, 84, 0.12);
-  --h1-gradient-start: #003f87;
-  --h1-gradient-end: #006b3f;
-  --input-bg: rgba(255, 255, 255, 0.85);
-  --input-border: rgba(81, 83, 84, 0.2);
-  --toolbar-gradient-fade: rgba(214, 206, 189, 0.96);
-  --icon-accent: #003f87;
-  --footer-text: #515354;
-  --popover-bg: #ffffff;
-  --popover-border: rgba(81, 83, 84, 0.15);
-  --popover-title: #243e2c;
-  --popover-text: #515354;
-  --success-bright: #006b3f;
-  --shadow-popover: 0 10px 25px -5px rgba(36, 62, 44, 0.12);
-  --card-tint-red: rgba(206, 17, 38, 0.12);
-  --card-tint-yellow: rgba(252, 209, 22, 0.18);
-  --timeline-track-bg: rgba(36, 62, 44, 0.08);
-  --timeline-accent-start: #003f87;
-  --timeline-accent-end: #006b3f;
-  --timeline-today: rgba(0, 63, 135, 0.45);
-  --timeline-marker-line: rgba(81, 83, 84, 0.25);
-  --timeline-marker-label: rgba(81, 83, 84, 0.65);
-  --timeline-prejoin-stripe: rgba(36, 62, 44, 0.08);
-  --timeline-prejoin-border: rgba(81, 83, 84, 0.15);
-  --wait-stripe-a: rgba(201, 160, 0, 0.2);
-  --wait-stripe-b: rgba(201, 160, 0, 0.38);
-  --wait-stripe-alt-a: rgba(201, 160, 0, 0.06);
-  --wait-stripe-alt-b: rgba(201, 160, 0, 0.1);
-  --wait-border-strong: rgba(201, 160, 0, 0.35);
-  --wait-border-soft: rgba(201, 160, 0, 0.16);
-  --wait-progress-spec: rgba(0, 63, 135, 0.2);
+  
+  /* Backgrounds: Crisp white washed with exactly 8% Brand Tan */
+  --bg-color: color-mix(in srgb, var(--brand-tan) 8%, #FFFFFF);
+  --card-bg: #FFFFFF;
+  
+  /* Borders: Mixed from Brand Grey */
+  --card-border: color-mix(in srgb, var(--brand-grey) 20%, transparent);
+
+  /* Typography */
+  --text-main: color-mix(in srgb, var(--brand-blue) 25%, #1A1C1E);
+  --text-dim: var(--brand-grey);
+  --text-muted: color-mix(in srgb, var(--brand-grey) 65%, #FFFFFF);
+
+  /* Status Colors */
+  --green: #107C41; /* Accessible green */
+  --yellow: #C48A00; /* Accessible dark yellow/gold */
+  --red: var(--brand-red); /* Pure Brand Red */
+
+  /* UI Accents */
+  --accent: var(--brand-blue); /* Pure Brand Blue */
+  --accent-muted: var(--brand-grey);
+  --accent-soft-bg: rgba(0, 63, 135, 0.06);
+  --accent-soft-border: rgba(0, 63, 135, 0.25);
+  --accent-ghost: rgba(0, 63, 135, 0.06);
+  --accent-ghost-active: rgba(0, 63, 135, 0.14);
+
+  /* Structural Elements */
+  --header-bg: rgba(255, 255, 255, 0.95);
+  --header-border: color-mix(in srgb, var(--brand-grey) 15%, transparent);
+  
+  --h1-gradient-start: var(--brand-blue);
+  --h1-gradient-end: #1D66BE; /* Beautiful blue shift */
+
+  --input-bg: #FFFFFF;
+  --input-border: color-mix(in srgb, var(--brand-grey) 35%, transparent);
+  --toolbar-gradient-fade: color-mix(in srgb, var(--brand-tan) 8%, rgba(255, 255, 255, 0.95));
+
+  --icon-accent: var(--brand-blue);
+  --footer-text: var(--brand-grey);
+
+  --popover-bg: #FFFFFF;
+  --popover-border: color-mix(in srgb, var(--brand-grey) 25%, transparent);
+  --popover-title: var(--text-main);
+  --popover-text: var(--text-dim);
+  
+  --success-bright: #107C41;
+  --shadow-popover: 0 12px 30px -5px rgba(0, 0, 0, 0.15);
+
+  /* Status Tints */
+  --card-tint-red: rgba(206, 17, 38, 0.05); /* Soft, un-muddy tint */
+  --card-tint-yellow: rgba(196, 138, 0, 0.06);
+
+  /* Timeline */
+  --timeline-track-bg: color-mix(in srgb, var(--brand-grey) 8%, transparent);
+  --timeline-accent-start: var(--brand-blue);
+  --timeline-accent-end: var(--brand-red);
+  --timeline-today: var(--brand-blue);
+  --timeline-marker-line: color-mix(in srgb, var(--brand-grey) 25%, transparent);
+  --timeline-marker-label: var(--text-dim);
+  --timeline-prejoin-stripe: color-mix(in srgb, var(--brand-grey) 4%, transparent);
+  --timeline-prejoin-border: color-mix(in srgb, var(--brand-grey) 12%, transparent);
+
+  /* Wait zones */
+  --wait-stripe-a: rgba(196, 138, 0, 0.15);
+  --wait-stripe-b: rgba(196, 138, 0, 0.3);
+  --wait-stripe-alt-a: rgba(196, 138, 0, 0.05);
+  --wait-stripe-alt-b: rgba(196, 138, 0, 0.1);
+  --wait-border-strong: rgba(196, 138, 0, 0.35);
+  --wait-border-soft: rgba(196, 138, 0, 0.15);
+  --wait-progress-spec: rgba(0, 63, 135, 0.15);
   --wait-progress-solid: rgba(0, 63, 135, 0.45);
-  --rank-axis-projected: rgba(201, 160, 0, 0.75);
+  --rank-axis-projected: #C48A00;
+
   --danger-soft-bg: rgba(206, 17, 38, 0.08);
   --danger-soft-border: rgba(206, 17, 38, 0.3);
-  --danger-soft-text: #b91c1c;
-  --patch-tan-1: #e8d4b8;
-  --patch-tan-2: #d4b896;
-  --patch-tan-3: #b39475;
-  --patch-tan-4: #8f6848;
-  --surface-inset: rgba(81, 83, 84, 0.06);
-  --setup-section-surface: color-mix(in srgb, var(--accent) 10%, transparent);
+  --danger-soft-text: var(--brand-red);
+
+  /* Patches */
+  --patch-tan-1: var(--brand-tan);
+  --patch-tan-2: color-mix(in srgb, var(--brand-tan) 80%, black);
+  --patch-tan-3: color-mix(in srgb, var(--brand-tan) 60%, black);
+  --patch-tan-4: color-mix(in srgb, var(--brand-tan) 40%, black);
+
+  --surface-inset: color-mix(in srgb, var(--brand-grey) 6%, transparent);
+  --setup-section-surface: color-mix(in srgb, var(--brand-blue) 3%, transparent);
 }
