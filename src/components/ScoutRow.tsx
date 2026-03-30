@@ -669,27 +669,51 @@ export const ScoutRow: React.FC<Props> = ({
             .filter((m) => m.percent !== null)
             .map((m, index) => {
               const isProjected = m.projected !== null;
+              const isLower = index % 2 !== 0;
               return (
-                <span
+                <div
                   key={m.rank}
-                  className="scout-rank-axis__label"
                   style={{
                     position: "absolute",
                     left: `${m.percent}%`,
-                    top: index % 2 === 0 ? 0 : 15,
+                    top: isLower ? 15 : 0,
                     transform: "translateX(-50%)",
-                    fontSize: "0.68rem",
-                    color: m.earned ? "var(--text-dim)" : "var(--rank-axis-projected)",
-                    fontWeight: m.earned ? 600 : 400,
-                    whiteSpace: "nowrap",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    zIndex: isLower ? 1 : 2,
                   }}
                 >
-                  {m.earned
-                    ? formatDateWithApostrophe(m.earned)
-                    : isProjected
-                      ? `(${formatDateWithApostrophe(m.projected!)})`
-                      : null}
-                </span>
+                  {/* Subtle connecting line to timeline */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: "100%",
+                      left: "50%",
+                      width: "1px",
+                      height: isLower ? "23px" : "8px",
+                      background: m.earned ? "var(--text-main)" : "var(--rank-axis-projected)",
+                      opacity: 0.2,
+                      transform: "translateX(-50%)",
+                    }}
+                  />
+                  <span
+                    className="scout-rank-axis__label"
+                    style={{
+                      fontSize: "0.68rem",
+                      color: m.earned ? "var(--text-dim)" : "var(--rank-axis-projected)",
+                      fontWeight: m.earned ? 600 : 400,
+                      whiteSpace: "nowrap",
+                      textShadow: "0 0 4px var(--card-bg), 0 0 6px var(--card-bg)",
+                    }}
+                  >
+                    {m.earned
+                      ? formatDateWithApostrophe(m.earned)
+                      : isProjected
+                        ? `(${formatDateWithApostrophe(m.projected!)})`
+                        : null}
+                  </span>
+                </div>
               );
             })}
         </div>

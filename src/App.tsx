@@ -62,7 +62,10 @@ function App() {
       case "risk": {
         const sa = STATUS_ORDER[getStatus(a.data as ScoutAdvancement)] ?? 2;
         const sb = STATUS_ORDER[getStatus(b.data as ScoutAdvancement)] ?? 2;
-        return sa - sb || a.lastName.localeCompare(b.lastName);
+        if (sa !== sb) return sa - sb;
+        const da = a.data?.dob ? parseISO(a.data.dob).getTime() : Infinity;
+        const db = b.data?.dob ? parseISO(b.data.dob).getTime() : Infinity;
+        return da - db || a.lastName.localeCompare(b.lastName);
       }
       case "age_desc": {
         const da = a.data?.dob ? parseISO(a.data.dob).getTime() : 0;
