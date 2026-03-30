@@ -1,13 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import scoutbookLogin from './plugins/vite-plugin-scoutbook-login'
-
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    scoutbookLogin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
@@ -38,6 +35,12 @@ export default defineConfig({
         target: 'https://api.scouting.org',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/scouting-api/, ''),
+        secure: true,
+      },
+      '/auth-api': {
+        target: 'https://auth.scouting.org',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/auth-api/, ''),
         secure: true,
       },
     },

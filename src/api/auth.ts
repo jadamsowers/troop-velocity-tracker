@@ -2,6 +2,40 @@ const TOKEN_KEY = 'scoutbook_token';
 const UNIT_ID_KEY = 'scoutbook_unit_id';
 const UNIT_LABEL_KEY = 'scoutbook_unit_label';
 
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || '';
+const AUTH_BASE = import.meta.env.DEV ? '/auth-api' : `${WORKER_URL}/auth`;
+
+export interface LoginResult {
+    token: string;
+    userId: string;
+}
+
+export async function loginWithCredentials(username: string, password: string): Promise<LoginResult> {
+    const res = await fetch(`${AUTH_BASE}/api/users/${encodeURIComponent(username)}/authenticate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json; version=2',
+        },
+        body: JSON.stringify({ password }),
+    });
+
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || `Login failed (${res.status})`);
+    }
+
+    const data = await res.json();
+    if (!data.token) {
+        throw new Error('No token in response');
+    }
+
+    return {
+        token: data.token,
+        userId: data.account?.userId?.toString() || '',
+    };
+}
+
 export const auth = {
     getToken: () => localStorage.getItem(TOKEN_KEY),
     setToken: (token: string) => localStorage.setItem(TOKEN_KEY, token),

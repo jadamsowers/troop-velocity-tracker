@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Check, Loader2, Terminal, Copy, LogIn, AlertCircle } from "lucide-react";
-import { auth } from "../api/auth";
+import { Loader2, LogIn, AlertCircle, KeyRound } from "lucide-react";
+import { auth, loginWithCredentials } from "../api/auth";
 import { scoutingClient } from "../api/scoutingClient";
 
 interface Props {
@@ -23,15 +23,16 @@ export const Setup: React.FC<Props> = ({
   isEditing = false,
   onClearCache,
 }) => {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [token, setToken] = useState(auth.getToken() || "");
   const [unitId, setUnitId] = useState(auth.getUnitId() || "");
   const [units, setUnits] = useState<Unit[]>([]);
   const [loadingUnits, setLoadingUnits] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string>("");
-  const [pastedUnitLabel, setPastedUnitLabel] = useState("");
-  const [browserLoginLoading, setBrowserLoginLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [pastedUnitLabel, setPastedUnitLabel] = useState("");
 
   useEffect(() => {
     if (token && token.split(".").length === 3) {
@@ -39,31 +40,42 @@ export const Setup: React.FC<Props> = ({
     }
   }, [token]);
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) return;
+
+    setLoginLoading(true);
+    setError("");
+    try {
+      const result = await loginWithCredentials(username, password);
+      setToken(result.token);
+      setPassword("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
   const handleTokenChange = (val: string) => {
-    // Smart Paste: Detect JSON from our improved Python script
     if (val.trim().startsWith("{")) {
       try {
         const parsed = JSON.parse(val);
         if (parsed.token) {
-          // Only update local state, don't save to localStorage yet
           setToken(parsed.token);
-          if (parsed.unitId) {
-            setUnitId(parsed.unitId);
-          }
-          if (parsed.unitName || parsed.unitLabel) {
+          if (parsed.unitId) setUnitId(parsed.unitId);
+          if (parsed.unitName || parsed.unitLabel)
             setPastedUnitLabel(parsed.unitName || parsed.unitLabel);
-          }
           setError("");
           return;
         }
-      } catch (e) {}
+      } catch { /* not JSON */ }
     }
     setToken(val);
     setError("");
   };
 
   const fetchUnits = async () => {
-    // Temporarily set token in localStorage for validation
     const previousToken = auth.getToken();
     auth.setToken(token);
     scoutingClient.setSetupMode(true);
@@ -88,7 +100,7 @@ export const Setup: React.FC<Props> = ({
         const guid = org.organizationGuid || org.orgGuid;
         if (guid && !seenGuids.has(guid)) {
           discoveredUnits.push({
-            guid: guid,
+            guid,
             name: `${org.unitType || "Unit"} ${org.unitNumber || org.number || ""}`.trim(),
             type: org.unitType || "Unit",
             number: org.unitNumber || org.number || "",
@@ -111,7 +123,6 @@ export const Setup: React.FC<Props> = ({
       setError(
         `Unable to fetch units: ${errorMessage}. Please check your token is valid.`,
       );
-      // Restore previous token if validation fails
       if (previousToken) {
         auth.setToken(previousToken);
       } else {
@@ -139,42 +150,6 @@ export const Setup: React.FC<Props> = ({
     }
   };
 
-  const handleCopyCommand = () => {
-    navigator.clipboard.writeText("python3 scripts/login_scoutbook.py");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleBrowserLogin = async () => {
-    setBrowserLoginLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/login", { method: "POST" });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Login failed");
-        return;
-      }
-
-      setToken(data.token);
-      auth.setToken(data.token);
-
-      if (data.units?.length > 0) {
-        setUnits(data.units);
-        if (data.units.length === 1) {
-          setUnitId(data.units[0].guid);
-        }
-      }
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Failed to connect to login service",
-      );
-    } finally {
-      setBrowserLoginLoading(false);
-    }
-  };
-
   return (
     <div
       className="setup setup-form"
@@ -194,14 +169,14 @@ export const Setup: React.FC<Props> = ({
             Connect Scoutbook
           </h2>
           <p className="setup__subtitle" style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
-            One-time setup to sync your troop data
+            Sign in with your Scouting America account
           </p>
         </div>
       </div>
 
       <div className="setup__body" style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
         <section
-          className="setup-section setup-section--browser-login"
+          className="setup-section setup-section--login"
           style={{
             background: "var(--setup-section-surface)",
             padding: "1.5rem",
@@ -215,15 +190,11 @@ export const Setup: React.FC<Props> = ({
         >
           <div
             className="setup-section__heading"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-            }}
+            style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
           >
             <LogIn size={20} color="var(--accent)" />
             <h3 className="setup-section__title" style={{ fontSize: "1.1rem", fontWeight: "500" }}>
-              Sign in with Scoutbook
+              Sign in with Scouting America
             </h3>
           </div>
           <p
@@ -235,48 +206,76 @@ export const Setup: React.FC<Props> = ({
               maxWidth: "380px",
             }}
           >
-            Opens a browser window where you sign in to your Scouting account.
-            Your token and unit are captured automatically.
+            Use the same credentials you use for Scoutbook or Internet Advancement.
           </p>
-          <button
-            onClick={handleBrowserLogin}
-            disabled={browserLoginLoading}
-            className="button-primary"
-            style={{
-              padding: "0.85rem 2rem",
-              fontSize: "1rem",
-              fontWeight: "600",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.6rem",
-              width: "100%",
-              justifyContent: "center",
-            }}
+
+          <form
+            onSubmit={handleLogin}
+            style={{ width: "100%", display: "flex", flexDirection: "column", gap: "0.75rem" }}
           >
-            {browserLoginLoading ? (
-              <>
-                <Loader2 className="animate-spin" size={18} />
-                Waiting for login…
-              </>
-            ) : (
-              <>
-                <LogIn size={18} />
-                Login with Scoutbook
-              </>
-            )}
-          </button>
-          {browserLoginLoading && (
-            <p
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              autoFocus
               style={{
-                fontSize: "0.8rem",
-                color: "var(--text-dim)",
-                textAlign: "center",
-                fontStyle: "italic",
+                padding: "0.85rem",
+                borderRadius: "0.75rem",
+                background: "var(--input-bg)",
+                border: "1px solid var(--input-border)",
+                color: "var(--text-main)",
+                fontSize: "0.9rem",
+                width: "100%",
+                boxSizing: "border-box",
+              }}
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              style={{
+                padding: "0.85rem",
+                borderRadius: "0.75rem",
+                background: "var(--input-bg)",
+                border: "1px solid var(--input-border)",
+                color: "var(--text-main)",
+                fontSize: "0.9rem",
+                width: "100%",
+                boxSizing: "border-box",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={loginLoading || !username || !password}
+              className="button-primary"
+              style={{
+                padding: "0.85rem 2rem",
+                fontSize: "1rem",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.6rem",
+                width: "100%",
+                justifyContent: "center",
               }}
             >
-              A browser window should have opened. Sign in there, then come back here.
-            </p>
-          )}
+              {loginLoading ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <LogIn size={18} />
+                  Sign In
+                </>
+              )}
+            </button>
+          </form>
 
           {error && (
             <div
@@ -335,7 +334,7 @@ export const Setup: React.FC<Props> = ({
                   marginBottom: "0.5rem",
                 }}
               >
-                <Terminal size={16} color="var(--text-dim)" />
+                <KeyRound size={16} color="var(--text-dim)" />
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "500", margin: 0 }}>
                   Manual Token Entry
                 </h4>
@@ -347,32 +346,7 @@ export const Setup: React.FC<Props> = ({
                   lineHeight: "1.5",
                 }}
               >
-                You can also run{" "}
-                <code
-                  style={{
-                    background: "var(--surface-inset)",
-                    padding: "0.15rem 0.4rem",
-                    borderRadius: "0.25rem",
-                    fontSize: "0.8rem",
-                  }}
-                >
-                  python3 scripts/login_scoutbook.py
-                </code>{" "}
-                <button
-                  onClick={handleCopyCommand}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--accent-muted)",
-                    cursor: "pointer",
-                    padding: 0,
-                    fontSize: "0.75rem",
-                    verticalAlign: "middle",
-                  }}
-                >
-                  {copied ? <Check size={12} color="var(--green)" /> : <Copy size={12} />}
-                </button>{" "}
-                and paste the result below:
+                Paste a JWT token or JSON login package from browser dev tools:
               </p>
               <input
                 className="setup-token-input"
@@ -517,17 +491,6 @@ export const Setup: React.FC<Props> = ({
                         fontSize: "0.8rem",
                       }}
                     />
-                    <p
-                      style={{
-                        fontSize: "0.7rem",
-                        color: "var(--text-dim)",
-                        textAlign: "center",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      TIP: Navigate to your <b>Roster</b> page in the login
-                      window and run the script again.
-                    </p>
                   </div>
                 )}
               </>
@@ -601,7 +564,7 @@ export const Setup: React.FC<Props> = ({
               }}
               title="Clear cached scout data and refresh"
             >
-              🚀 Clear Cached Data & Refresh
+              Clear Cached Data & Refresh
             </button>
           </section>
         )}
