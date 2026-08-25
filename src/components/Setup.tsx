@@ -146,6 +146,17 @@ export const Setup: React.FC<Props> = ({
   };
 
   const handleBrowserLogin = async () => {
+    // In the built app served from Docker there's no Vite dev-plugin to spawn
+    // Playwright — the login helper at /token handles credentials server-side.
+    // Open it in a new tab and expand the paste field so the user knows where
+    // the resulting JSON goes on their way back.
+    if (import.meta.env.PROD) {
+      setShowManualEntry(true);
+      setError("");
+      window.open("/token", "_blank", "noopener,noreferrer");
+      return;
+    }
+
     setBrowserLoginLoading(true);
     setError("");
     try {
