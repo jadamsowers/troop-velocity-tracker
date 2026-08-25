@@ -1,0 +1,38 @@
+name: troop-velocity-tracker
+
+services:
+  app:
+    build: .
+    image: troop-velocity-tracker:latest
+    container_name: troop-velocity-tracker
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      TRUST_PROXY: cloudflare
+      NODE_ENV: production
+    # Uncomment to also expose the app to localhost for direct browser
+    # testing alongside the tunnel. Not required — cloudflared reaches it
+    # over the internal `tunnel` network by service name (`app:8080`).
+    # ports:
+    #   - "127.0.0.1:8080:8080"
+    networks:
+      - tunnel
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: tvt-cloudflared
+    restart: unless-stopped
+    # `--no-autoupdate` keeps upgrades in your control — pull a new image
+    # to update. `run` takes the tunnel token from $TUNNEL_TOKEN.
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?TUNNEL_TOKEN must be set — copy .env.example to .env and paste the token from the Cloudflare Zero Trust dashboard}
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - tunnel
+
+networks:
+  tunnel:
+    driver: bridge

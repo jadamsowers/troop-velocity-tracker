@@ -1,8 +1,8 @@
 import { auth } from './auth';
 
-// In dev, Vite proxies /scouting-api → https://api.scouting.org to bypass CORS.
-// In production the app must be served from a domain the API allows, or behind a real proxy.
-const BASE_URL = import.meta.env.DEV ? '/scouting-api' : 'https://api.scouting.org';
+// /scouting-api is proxied to https://api.scouting.org — by Vite in dev, by the
+// bundled Node server in prod (see login-helper/server.mjs). Same path both ways.
+const BASE_URL = '/scouting-api';
 const ESB_URL = 'aHR0cHM6Ly9hZHZhbmNlbWVudHMuc2NvdXRpbmcub3JnL3Jvc3Rlcg==';
 
 // Flag to prevent auto-logout during setup/validation

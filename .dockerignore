@@ -1,0 +1,34 @@
+# Version control and editor cruft
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+
+# Local dev artifacts we never want in the image
+node_modules
+dist
+build
+coverage
+*.log
+
+# Local docs / dev-only scripts irrelevant to the runtime
+README.md
+CLAUDE.md
+overview.md
+todo.md
+scripts
+
+# Docker meta
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Plans / memory / claude data (should not be present, but belt-and-braces)
+.claude

@@ -1,0 +1,13 @@
+{
+  "name": "bsa-login-helper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Small web helper that lets a Scouter obtain a scouting.org JWT for Troop Velocity Tracker.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}

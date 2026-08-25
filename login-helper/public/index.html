@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Get your scouting.org token</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/token/styles.css" />
+  </head>
+  <body>
+    <main class="card">
+      <header class="card__head">
+        <h1>Get your scouting.org token</h1>
+        <p class="card__sub">
+          Use this once to hand a token to Troop Velocity Tracker.
+        </p>
+      </header>
+
+      <section id="view-login" class="view">
+        <form id="login-form" autocomplete="off" novalidate>
+          <label class="field">
+            <span>scouting.org email</span>
+            <input
+              id="username"
+              name="username"
+              type="email"
+              required
+              autocomplete="username"
+              spellcheck="false"
+              autocapitalize="none"
+            />
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autocomplete="current-password"
+            />
+          </label>
+          <button id="submit" class="btn btn--primary" type="submit">
+            <span class="btn__label">Get my token</span>
+            <span class="btn__spinner" aria-hidden="true"></span>
+          </button>
+          <p id="error" class="error" hidden></p>
+          <p class="disclosure">
+            Your credentials are proxied directly to scouting.org over HTTPS.
+            They are not stored or logged by this service.
+          </p>
+        </form>
+
+        <details class="fallback">
+          <summary>Log in another way</summary>
+          <p>
+            If the form above doesn't work (for example, if you sign in with
+            Apple, Google, or a scouting.org SSO account), grab the token
+            manually:
+          </p>
+          <ol>
+            <li>
+              Open
+              <a
+                href="https://advancements.scouting.org/login"
+                target="_blank"
+                rel="noreferrer noopener"
+                >advancements.scouting.org</a
+              >
+              in a new tab and sign in normally.
+            </li>
+            <li>Open your browser's developer tools (F12) → Console tab.</li>
+            <li>Paste this and press Enter:</li>
+          </ol>
+          <pre id="snippet"><code>JSON.stringify({token: JSON.parse(localStorage.LOGIN_DATA).token})</code></pre>
+          <button id="copy-snippet" class="btn btn--ghost" type="button">
+            Copy snippet
+          </button>
+          <p>
+            Copy the resulting JSON string (with quotes) and paste it into
+            Troop Velocity Tracker's token field.
+          </p>
+        </details>
+      </section>
+
+      <section id="view-result" class="view" hidden>
+        <h2>You're in.</h2>
+        <p class="token-preview">
+          Token: <code id="token-preview"></code>
+        </p>
+
+        <div id="unit-block">
+          <label class="field">
+            <span>Which unit?</span>
+            <select id="unit"></select>
+          </label>
+        </div>
+
+        <p id="no-units" class="warn" hidden>
+          No units were found for this account. You can still copy the raw
+          token below.
+        </p>
+
+        <button id="copy-result" class="btn btn--primary" type="button">
+          Copy to clipboard
+        </button>
+        <p id="copy-status" class="copy-status" hidden>Copied. Paste into Troop Velocity Tracker.</p>
+
+        <p class="next-steps">
+          Open Troop Velocity Tracker and paste into the Setup screen — the
+          token, unit, and unit name will populate together.
+        </p>
+
+        <button id="reset" class="btn btn--ghost" type="button">
+          Log in as someone else
+        </button>
+      </section>
+
+      <footer class="card__foot">
+        <a
+          href="https://github.com/jathayde/troop-velocity-tracker"
+          target="_blank"
+          rel="noreferrer noopener"
+          >Troop Velocity Tracker</a
+        >
+        · Not affiliated with Scouting America.
+      </footer>
+    </main>
+
+    <script src="/token/app.js" defer></script>
+  </body>
+</html>
