@@ -105,7 +105,7 @@ export async function authenticate({ username, password }) {
         status: 429,
         body: {
           error:
-            "scouting.org is temporarily rate-limiting logins from this server. Please wait a minute and try again, or use the fallback instructions.",
+            "scouting.org is temporarily rate-limiting logins from this server. Please wait a minute and try again.",
           code: data?.code,
         },
       };
@@ -114,7 +114,7 @@ export async function authenticate({ username, password }) {
       status: 502,
       body: {
         error:
-          "scouting.org rejected the login. Try again in a moment, or use the fallback instructions.",
+          "scouting.org rejected the sign-in. Try again in a moment.",
         code: data?.code,
       },
     };

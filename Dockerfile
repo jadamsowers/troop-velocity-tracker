@@ -1,13 +1,10 @@
 # Multi-stage: build the tracker SPA, then ship a tiny Node runtime that
-# serves the SPA + the login helper + a scouting.org API proxy on one port.
+# serves the SPA + the sign-in endpoint + a scouting.org API proxy on one port.
 
 FROM node:22-alpine AS builder
 WORKDIR /build
 
-# Skip Playwright's ~200MB Chromium download — it's a devDependency of the
-# tracker used only by the local Vite login plugin, never in the built app.
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
-    CI=true
+ENV CI=true
 
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -15,6 +12,8 @@ RUN npm ci --no-audit --no-fund
 COPY tsconfig.json tsconfig.app.json tsconfig.node.json ./
 COPY vite.config.ts index.html ./
 COPY plugins ./plugins
+# vite.config.ts imports the dev login middleware, which shares this module.
+COPY login-helper/scouting.mjs login-helper/scouting.d.mts ./login-helper/
 COPY public ./public
 COPY src ./src
 
@@ -26,7 +25,6 @@ WORKDIR /app
 
 COPY --from=builder /build/dist ./dist
 COPY login-helper/server.mjs login-helper/scouting.mjs login-helper/ratelimit.mjs ./login-helper/
-COPY login-helper/public ./login-helper/public
 
 ENV NODE_ENV=production \
     PORT=8080 \
