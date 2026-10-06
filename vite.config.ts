@@ -13,11 +13,10 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       workbox: {
         // Don't intercept these paths with the SPA navigateFallback — they are
-        // served by the Node server in the combined container (login helper,
-        // credential-replay endpoint, scouting.org proxy, health check) and
-        // must reach the network, not the precached tracker index.html.
+        // served by the Node server in the combined container (sign-in
+        // endpoint, scouting.org proxy, health check) and must reach the
+        // network, not the precached tracker index.html.
         navigateFallbackDenylist: [
-          /^\/token(\/|$)/,
           /^\/api\//,
           /^\/scouting-api\//,
           /^\/healthz$/,

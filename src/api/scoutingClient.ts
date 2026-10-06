@@ -25,9 +25,10 @@ async function scoutingFetch(endpoint: string, options: RequestInit = {}, token?
 
     if (!response.ok) {
         if (response.status === 401) {
-            // Only auto-logout if not in setup mode
+            // Token rejected: drop it (keeping the unit) so the app returns to
+            // sign-in. Skipped during setup, which handles its own errors.
             if (!isInSetupMode) {
-                auth.logout();
+                auth.expireSession();
                 window.location.reload();
             }
         }

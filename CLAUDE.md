@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` — TypeScript check + Vite production build
 - `npm run lint` — ESLint across the project
 - `npm run preview` — Serve the production build locally
+- `docker build -t troop-velocity-tracker . && docker run -p 8080:8080 troop-velocity-tracker` — Containerized app (SPA + sign-in endpoint + `/scouting-api` proxy) on one port
 
 No test framework is configured.
 
@@ -17,7 +18,7 @@ This is a React 19 + TypeScript PWA (Vite + vite-plugin-pwa) that tracks BSA Sco
 
 ### Data flow
 
-1. **Auth** (`src/api/auth.ts`) — Stores a JWT Bearer token and unit GUID in localStorage. The token is decoded client-side to extract `userId`/`personGuid`.
+1. **Auth** (`src/api/auth.ts`) — Setup signs in with my.scouting.org username/password via `POST /api/login` (served by `login-helper/server.mjs` in the container, by `plugins/vite-plugin-scoutbook-login.ts` in dev; both call `login-helper/scouting.mjs`). Only the returned JWT and unit GUID are stored in localStorage. The JWT `exp` is checked on load and on a timer; an expired or 401'd token returns the user to sign-in with the unit remembered. The token is decoded client-side to extract `userId`/`personGuid`.
 2. **API client** (`src/api/scoutingClient.ts`) — Wraps `fetch` calls to the Scouting API. In dev, Vite proxies `/scouting-api` to `https://api.scouting.org` to avoid CORS. Endpoints: roster, ranks, merit badges, profile.
 3. **Cache** (`src/api/cache.ts`) — localStorage cache with 1-hour TTL, keyed by unit GUID.
 4. **App.tsx** — Orchestrator: loads roster, fans out parallel requests per scout (ranks + merit badges + profile), filters out 18+ and Eagle scouts, then renders `ScoutRow` cards.

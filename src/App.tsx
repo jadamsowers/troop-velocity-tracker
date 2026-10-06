@@ -12,11 +12,21 @@ import { parseISO, differenceInMonths } from "date-fns";
 import { Rocket, Users, Cog, Power, ArrowUpDown } from "lucide-react";
 import { ThemeToggle } from "./theme/ThemeToggle";
 
+const SESSION_ENDED_NOTICE =
+  "Your scouting.org session has expired. Sign in again to continue.";
+
 function App() {
   const [scouts, setScouts] = useState<any[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(
     auth.isAuthenticated(),
   );
+  // A remembered unit without a usable token means a previous session ended
+  // (expired, or rejected by the API) rather than an explicit sign-out.
+  const [sessionNotice, setSessionNotice] = useState(() => {
+    if (auth.isAuthenticated()) return "";
+    if (auth.getToken() && !auth.hasValidToken()) auth.expireSession();
+    return auth.getUnitId() ? SESSION_ENDED_NOTICE : "";
+  });
   const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState({
@@ -142,6 +152,23 @@ function App() {
         loadData(unitId);
       }
     }
+  }, [isAuthenticated]);
+
+  // Return to sign-in as soon as the stored token expires.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const expiry = auth.getSessionExpiry();
+    if (expiry === null) return;
+    const endSession = () => {
+      auth.expireSession();
+      setShowSettings(false);
+      setSessionNotice(SESSION_ENDED_NOTICE);
+      setIsAuthenticated(false);
+    };
+    // setTimeout overflows past ~24.8 days; tokens are far shorter-lived.
+    const delay = Math.min(Math.max(expiry - Date.now(), 0), 2 ** 31 - 1);
+    const timer = window.setTimeout(endSession, delay);
+    return () => window.clearTimeout(timer);
   }, [isAuthenticated]);
 
   const loadData = async (unitId: string) => {
@@ -407,7 +434,13 @@ function App() {
       <main className="app-main">
         {!isAuthenticated ? (
           <div className="app-view app-view--setup">
-            <Setup onComplete={() => setIsAuthenticated(true)} />
+            <Setup
+              notice={sessionNotice}
+              onComplete={() => {
+                setSessionNotice("");
+                setIsAuthenticated(true);
+              }}
+            />
           </div>
         ) : showSettings ? (
           <div className="app-view app-view--setup">

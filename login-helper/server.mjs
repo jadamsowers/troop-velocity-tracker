@@ -10,7 +10,6 @@ import { hit as rateLimitHit } from "./ratelimit.mjs";
 const PORT = Number(process.env.PORT || 8080);
 const TRUST_PROXY = (process.env.TRUST_PROXY || "").toLowerCase();
 const HERE = fileURLToPath(new URL(".", import.meta.url));
-const HELPER_DIR = resolve(HERE, "public");
 const TRACKER_DIR = resolve(HERE, "..", "dist");
 const MAX_BODY_BYTES = 4096;
 const PROXY_TIMEOUT_MS = 20_000;
@@ -112,6 +111,8 @@ async function readBody(req, maxBytes = MAX_BODY_BYTES) {
   });
 }
 
+// Credentials are only forwarded to scouting.org. Never log the request body,
+// the username, or the returned token — log lines carry outcome metadata only.
 async function handleLogin(req, res) {
   const key = clientKey(req);
 
@@ -280,26 +281,6 @@ async function handleGet(req, res) {
     return;
   }
 
-  if (path === "/token" || path === "/token/") {
-    await serveFromDir({
-      res,
-      rootDir: HELPER_DIR,
-      relPath: "/index.html",
-      spaFallback: false,
-    });
-    return;
-  }
-
-  if (path.startsWith("/token/")) {
-    await serveFromDir({
-      res,
-      rootDir: HELPER_DIR,
-      relPath: path.slice("/token".length),
-      spaFallback: false,
-    });
-    return;
-  }
-
   await serveFromDir({
     res,
     rootDir: TRACKER_DIR,
@@ -315,6 +296,12 @@ const server = createServer(async (req, res) => {
 
     if (url.pathname === "/api/login" && method === "POST") {
       await handleLogin(req, res);
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/")) {
+      const isLogin = url.pathname === "/api/login";
+      sendJson(res, isLogin ? 405 : 404, { error: isLogin ? "Method not allowed." : "Not found." });
       return;
     }
 
@@ -340,7 +327,6 @@ server.listen(PORT, () => {
   log("server.listen", {
     port: PORT,
     trustProxy: TRUST_PROXY || "off",
-    helperDir: HELPER_DIR,
     trackerDir: TRACKER_DIR,
   });
 });
