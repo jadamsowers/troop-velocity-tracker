@@ -3,13 +3,14 @@ import "./index.css";
 import "./App.css";
 import { ScoutRow } from "./components/ScoutRow";
 import { Setup } from "./components/Setup";
+import { MeritBadgePlanner } from "./components/MeritBadgePlanner";
 import type { ScoutAdvancement } from "./logic/advancement";
 import { getStatus, RANK_ORDER } from "./logic/advancement";
 import { auth } from "./api/auth";
 import { scoutingClient } from "./api/scoutingClient";
 import { cacheManager } from "./api/cache";
 import { parseISO, differenceInMonths } from "date-fns";
-import { Rocket, Users, Cog, Power, ArrowUpDown } from "lucide-react";
+import { Rocket, Users, Cog, Power, ArrowUpDown, Lightbulb } from "lucide-react";
 import { ThemeToggle } from "./theme/ThemeToggle";
 
 const SESSION_ENDED_NOTICE =
@@ -38,6 +39,7 @@ function App() {
   const [searchFilter, setSearchFilter] = useState("");
   const [selectedScouts, setSelectedScouts] = useState<Set<number>>(new Set());
   const [showComparison, setShowComparison] = useState(false);
+  const [showPlanner, setShowPlanner] = useState(false);
   const [filteredOutCount, setFilteredOutCount] = useState(0);
 
   type SortOption = { value: string; label: string };
@@ -610,6 +612,30 @@ function App() {
                     )}
                   </>
                 )}
+                <button
+                  onClick={() => setShowPlanner(!showPlanner)}
+                  aria-pressed={showPlanner}
+                  title="Suggest merit badges to host at troop meetings"
+                  style={{
+                    background: showPlanner
+                      ? "var(--accent-ghost-active)"
+                      : "var(--accent-ghost)",
+                    color: "var(--accent)",
+                    border: `1px solid var(--accent)`,
+                    padding: "0 0.75rem",
+                    height: "40px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    borderRadius: "0.5rem",
+                    fontSize: "0.9rem",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  <Lightbulb size={16} />
+                  Badge Planner
+                </button>
                 <ThemeToggle />
                 <button
                   style={{
@@ -707,6 +733,13 @@ function App() {
                 </div>
               </div>
             ) : null}
+
+            {showPlanner && (
+              <MeritBadgePlanner
+                scouts={scouts}
+                onClose={() => setShowPlanner(false)}
+              />
+            )}
 
             <div className="dashboard-content content-with-offset">
               <div className="scout-list">
