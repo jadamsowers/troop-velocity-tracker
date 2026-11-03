@@ -281,3 +281,95 @@ export function getRankProgress(scout: ScoutAdvancement) {
         };
     });
 }
+
+// How well each Eagle-required bucket fits a troop meeting or evening event.
+// 'meeting'  — most requirements can be completed in group sessions.
+// 'kickoff'  — group sessions cover the discussion pieces, but the badge has a
+//              multi-week tracking or at-home component scouts finish on their own.
+// 'outing'   — the core requirements need a campout, pool, trail, or ride.
+export type GroupFormat = 'meeting' | 'kickoff' | 'outing';
+
+export const GROUP_BADGE_FORMATS: Record<string, { host: string; format: GroupFormat; note: string }> = {
+    'First Aid': { host: 'First Aid', format: 'meeting', note: 'Hands-on skills stations work well in a series of meetings.' },
+    'Citizenship in the Community': { host: 'Citizenship in the Community', format: 'kickoff', note: 'Discussions fit meetings; scouts still attend a local government meeting and do 8 hours of service.' },
+    'Citizenship in the Nation': { host: 'Citizenship in the Nation', format: 'meeting', note: 'Mostly discussion; plan one historic site visit or field trip.' },
+    'Citizenship in the World': { host: 'Citizenship in the World', format: 'meeting', note: 'Discussion-heavy and easy to run as a group.' },
+    'Communication': { host: 'Communication', format: 'meeting', note: 'Speeches and campfire programs can be presented to the troop.' },
+    'Cooking': { host: 'Cooking', format: 'kickoff', note: 'Nutrition and meal planning fit meetings; the camp and trail meals need outings.' },
+    'Personal Fitness': { host: 'Personal Fitness', format: 'kickoff', note: 'Kick off the 12-week program at a meeting and check in at later meetings.' },
+    'Emergency Preparedness OR Lifesaving': { host: 'Emergency Preparedness', format: 'meeting', note: 'Emergency Preparedness fits meetings plus one drill; Lifesaving needs a pool.' },
+    'Environmental Science OR Sustainability': { host: 'Environmental Science', format: 'kickoff', note: 'Group activities fit meetings; observation or home-tracking pieces happen between sessions. Sustainability is the alternative.' },
+    'Personal Management': { host: 'Personal Management', format: 'kickoff', note: 'Kick off the 13-week budget at a meeting; discussions fit later meetings.' },
+    'Cycling OR Hiking OR Swimming': { host: 'Hiking', format: 'outing', note: 'Requires long hikes, rides, or swim sessions — schedule as outings.' },
+    'Camping': { host: 'Camping', format: 'outing', note: 'Requires 20 nights of camping — comes from troop campouts.' },
+    'Family Life': { host: 'Family Life', format: 'kickoff', note: 'Discussions fit a meeting; the 90-day chore log and family project happen at home.' },
+};
+
+const FORMAT_ORDER: Record<GroupFormat, number> = { meeting: 0, kickoff: 1, outing: 2 };
+
+export interface GroupBadgeScout {
+    name: string;
+    monthsUntil18: number;
+}
+
+export interface GroupBadgeSuggestion {
+    bucket: string;
+    host: string;
+    format: GroupFormat;
+    note: string;
+    score: number;
+    scouts: GroupBadgeScout[];
+}
+
+// Scouts with less runway count for more, so a badge three 17-year-olds need
+// outranks one that three 15-year-olds need.
+function urgencyWeight(monthsUntil18: number): number {
+    if (monthsUntil18 <= 12) return 3;
+    if (monthsUntil18 <= 24) return 2;
+    return 1;
+}
+
+export function suggestGroupMeritBadges(
+    scouts: { firstName: string; lastName: string; data: ScoutAdvancement }[],
+    windowMonths: number,
+): { suggestions: GroupBadgeSuggestion[]; scoutsInWindow: number; needElectives: GroupBadgeScout[] } {
+    const now = new Date();
+    const byBucket = new Map<string, GroupBadgeSuggestion>();
+    const needElectives: GroupBadgeScout[] = [];
+    let scoutsInWindow = 0;
+
+    for (const scout of scouts) {
+        if (!scout.data?.dob) continue;
+        const monthsUntil18 = differenceInMonths(addMonths(parseISO(scout.data.dob), 18 * 12), now);
+        if (monthsUntil18 < 0 || monthsUntil18 > windowMonths) continue;
+        scoutsInWindow++;
+
+        const entry = { name: `${scout.firstName} ${scout.lastName}`, monthsUntil18 };
+        const missing = calculateMissingEagleRequired(scout.data.earnedMeritBadges || []);
+        for (const bucket of missing) {
+            const meta = GROUP_BADGE_FORMATS[bucket];
+            let suggestion = byBucket.get(bucket);
+            if (!suggestion) {
+                suggestion = { bucket, ...meta, score: 0, scouts: [] };
+                byBucket.set(bucket, suggestion);
+            }
+            suggestion.score += urgencyWeight(monthsUntil18);
+            suggestion.scouts.push(entry);
+        }
+
+        if (Math.max(0, 21 - scout.data.meritBadgeCount) > missing.length) {
+            needElectives.push(entry);
+        }
+    }
+
+    const suggestions = [...byBucket.values()]
+        .map(s => ({ ...s, scouts: s.scouts.sort((a, b) => a.monthsUntil18 - b.monthsUntil18) }))
+        .sort((a, b) =>
+            b.score - a.score ||
+            FORMAT_ORDER[a.format] - FORMAT_ORDER[b.format] ||
+            b.scouts.length - a.scouts.length ||
+            a.host.localeCompare(b.host));
+    needElectives.sort((a, b) => a.monthsUntil18 - b.monthsUntil18);
+
+    return { suggestions, scoutsInWindow, needElectives };
+}
