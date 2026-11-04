@@ -23,10 +23,11 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Velocity Tracker',
+        name: 'Troop Velocity Tracker',
         short_name: 'Velocity',
         description: 'Track Scout advancement progress from Scoutbook',
-        theme_color: '#1e293b',
+        theme_color: '#003F87',
+        background_color: '#f7f4ee',
         icons: [
           {
             src: 'pwa-192x192.png',

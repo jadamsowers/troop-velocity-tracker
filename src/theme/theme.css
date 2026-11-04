@@ -1,186 +1,90 @@
+/*
+ * Design tokens. Surfaces are near-neutral with a faint khaki warmth; color
+ * lives in the accent (Scouting America Dark Blue), the status colors and the
+ * embroidered rank patches.
+ */
 :root {
-  /* BSA Core Brand Colors */
+  /* Scouting America brand values */
   --brand-red: #CE1126;
   --brand-blue: #003F87;
+  --brand-green: #006B3F;
+  --brand-yellow: #FCD116;
   --brand-tan: #D6CEBD;
-  --brand-grey: #515354;
+
+  --font-ui: "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-figure: "Barlow Semi Condensed", "Barlow", sans-serif;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 150ms;
+  --dur-menu: 200ms;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Rank patches keep uniform colors in both themes */
+  --patch-fill: #D6CEBD;
+  --patch-rim: #A8987A;
+  --patch-stitch: #7E6F55;
+  --patch-glyph: #0B3A78;
 }
 
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  
-  /* Backgrounds: Deep black mixed heavily with Brand Blue for a premium "midnight" look */
-  --bg-color: color-mix(in srgb, var(--brand-blue) 12%, #0A0A0B);
-  --card-bg: color-mix(in srgb, var(--brand-blue) 18%, #111213);
-  
-  /* Borders: A subtle hint of Brand Grey for dark backgrounds */
-  --card-border: rgba(255, 255, 255, 0.08);
 
-  /* Typography */
-  --text-main: #FFFFFF;
-  --text-dim: color-mix(in srgb, var(--brand-tan) 65%, #FFFFFF);
-  --text-muted: color-mix(in srgb, var(--brand-grey) 45%, #B0B0B0);
+  --bg: #161513;
+  --bg-deep: #12110f;
+  --surface: #1c1a18;
+  --raised: #262421;
+  --hairline: rgba(239, 233, 222, 0.08);
+  --hairline-strong: rgba(239, 233, 222, 0.14);
 
-  /* Status Colors: Brightened for dark mode accessibility */
-  --green: #4ADE80;
-  --yellow: #FACC15;
-  --red: #FF7682; /* Brightened Brand Red */
+  --text: #efe9de;
+  --text-2: #aaa398;
+  --text-3: #8a847a;
 
-  /* UI Accents: Brightened Brand Blue */
-  --accent: #5DA4EB; 
-  --accent-muted: var(--text-dim);
-  --accent-soft-bg: rgba(93, 164, 235, 0.15);
-  --accent-soft-border: rgba(93, 164, 235, 0.35);
-  --accent-ghost: rgba(93, 164, 235, 0.1);
-  --accent-ghost-active: rgba(93, 164, 235, 0.2);
+  --accent: #7da7e3;
+  --accent-fill: #2f6bc0;
+  --accent-soft: rgba(125, 167, 227, 0.14);
+  --on-accent: #ffffff;
 
-  /* Structural Elements */
-  --header-bg: color-mix(in srgb, var(--brand-blue) 15%, rgba(10, 10, 11, 0.95));
-  --header-border: rgba(255, 255, 255, 0.08);
-  
-  --h1-gradient-start: #5DA4EB;
-  --h1-gradient-end: #8ABFF2; /* Soft blue shift instead of clashing red */
+  --primary-fill: #efe9de;
+  --on-primary: #161513;
 
-  --input-bg: rgba(0, 0, 0, 0.3);
-  --input-border: rgba(255, 255, 255, 0.16);
-  --toolbar-gradient-fade: color-mix(in srgb, var(--brand-blue) 12%, rgba(10, 10, 11, 0.95));
+  --red: #f0626a;
+  --yellow: #e8b04a;
+  --green: #4cc38a;
 
-  --icon-accent: #5DA4EB;
-  --footer-text: var(--text-muted);
-
-  --popover-bg: color-mix(in srgb, var(--brand-blue) 22%, #18191A);
-  --popover-border: rgba(255, 255, 255, 0.12);
-  --popover-title: #FFFFFF;
-  --popover-text: var(--text-dim);
-  
-  --success-bright: #4ADE80;
-  --shadow-popover: 0 12px 30px -5px rgba(0, 0, 0, 0.6);
-
-  /* Status Tints */
-  --card-tint-red: rgba(255, 118, 130, 0.12);
-  --card-tint-yellow: rgba(250, 204, 21, 0.12);
-
-  /* Timeline */
-  --timeline-track-bg: rgba(255, 255, 255, 0.06);
-  --timeline-accent-start: #5DA4EB;
-  --timeline-accent-end: #FF7682;
-  --timeline-today: var(--text-dim);
-  --timeline-marker-line: rgba(255, 255, 255, 0.15);
-  --timeline-marker-label: rgba(255, 255, 255, 0.45);
-  --timeline-prejoin-stripe: rgba(255, 255, 255, 0.04);
-  --timeline-prejoin-border: rgba(255, 255, 255, 0.08);
-
-  /* Wait zones */
-  --wait-stripe-a: rgba(250, 204, 21, 0.18);
-  --wait-stripe-b: rgba(250, 204, 21, 0.35);
-  --wait-stripe-alt-a: rgba(250, 204, 21, 0.05);
-  --wait-stripe-alt-b: rgba(250, 204, 21, 0.1);
-  --wait-border-strong: rgba(250, 204, 21, 0.3);
-  --wait-border-soft: rgba(250, 204, 21, 0.12);
-  --wait-progress-spec: rgba(93, 164, 235, 0.25);
-  --wait-progress-solid: rgba(93, 164, 235, 0.55);
-  --rank-axis-projected: rgba(250, 204, 21, 0.65);
-
-  --danger-soft-bg: rgba(255, 118, 130, 0.15);
-  --danger-soft-border: rgba(255, 118, 130, 0.35);
-  --danger-soft-text: #FF7682;
-
-  /* Patches */
-  --patch-tan-1: var(--brand-tan);
-  --patch-tan-2: color-mix(in srgb, var(--brand-tan) 80%, black);
-  --patch-tan-3: color-mix(in srgb, var(--brand-tan) 60%, black);
-  --patch-tan-4: color-mix(in srgb, var(--brand-tan) 40%, black);
-
-  --surface-inset: rgba(255, 255, 255, 0.05);
-  --setup-section-surface: rgba(255, 255, 255, 0.03);
+  --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  
-  /* Backgrounds: Crisp white washed with exactly 8% Brand Tan */
-  --bg-color: color-mix(in srgb, var(--brand-tan) 8%, #FFFFFF);
-  --card-bg: #FFFFFF;
-  
-  /* Borders: Mixed from Brand Grey */
-  --card-border: color-mix(in srgb, var(--brand-grey) 20%, transparent);
 
-  /* Typography */
-  --text-main: color-mix(in srgb, var(--brand-blue) 25%, #1A1C1E);
-  --text-dim: var(--brand-grey);
-  --text-muted: color-mix(in srgb, var(--brand-grey) 65%, #FFFFFF);
+  --bg: #f7f4ee;
+  --bg-deep: #efe9df;
+  --surface: #ffffff;
+  --raised: #efe9df;
+  --hairline: rgba(31, 27, 22, 0.09);
+  --hairline-strong: rgba(31, 27, 22, 0.16);
 
-  /* Status Colors */
-  --green: #107C41; /* Accessible green */
-  --yellow: #C48A00; /* Accessible dark yellow/gold */
-  --red: var(--brand-red); /* Pure Brand Red */
+  --text: #1f1b16;
+  --text-2: #5e554a;
+  --text-3: #7b7266;
 
-  /* UI Accents */
-  --accent: var(--brand-blue); /* Pure Brand Blue */
-  --accent-muted: var(--brand-grey);
-  --accent-soft-bg: rgba(0, 63, 135, 0.06);
-  --accent-soft-border: rgba(0, 63, 135, 0.25);
-  --accent-ghost: rgba(0, 63, 135, 0.06);
-  --accent-ghost-active: rgba(0, 63, 135, 0.14);
+  --accent: var(--brand-blue);
+  --accent-fill: var(--brand-blue);
+  --accent-soft: rgba(0, 63, 135, 0.08);
+  --on-accent: #ffffff;
 
-  /* Structural Elements */
-  --header-bg: rgba(255, 255, 255, 0.95);
-  --header-border: color-mix(in srgb, var(--brand-grey) 15%, transparent);
-  
-  --h1-gradient-start: var(--brand-blue);
-  --h1-gradient-end: #1D66BE; /* Beautiful blue shift */
+  --primary-fill: var(--brand-blue);
+  --on-primary: #ffffff;
 
-  --input-bg: #FFFFFF;
-  --input-border: color-mix(in srgb, var(--brand-grey) 35%, transparent);
-  --toolbar-gradient-fade: color-mix(in srgb, var(--brand-tan) 8%, rgba(255, 255, 255, 0.95));
+  --red: var(--brand-red);
+  --yellow: #9a6700;
+  --green: var(--brand-green);
 
-  --icon-accent: var(--brand-blue);
-  --footer-text: var(--brand-grey);
-
-  --popover-bg: #FFFFFF;
-  --popover-border: color-mix(in srgb, var(--brand-grey) 25%, transparent);
-  --popover-title: var(--text-main);
-  --popover-text: var(--text-dim);
-  
-  --success-bright: #107C41;
-  --shadow-popover: 0 12px 30px -5px rgba(0, 0, 0, 0.15);
-
-  /* Status Tints */
-  --card-tint-red: rgba(206, 17, 38, 0.05); /* Soft, un-muddy tint */
-  --card-tint-yellow: rgba(196, 138, 0, 0.06);
-
-  /* Timeline */
-  --timeline-track-bg: color-mix(in srgb, var(--brand-grey) 8%, transparent);
-  --timeline-accent-start: var(--brand-blue);
-  --timeline-accent-end: var(--brand-red);
-  --timeline-today: var(--brand-blue);
-  --timeline-marker-line: color-mix(in srgb, var(--brand-grey) 25%, transparent);
-  --timeline-marker-label: var(--text-dim);
-  --timeline-prejoin-stripe: color-mix(in srgb, var(--brand-grey) 4%, transparent);
-  --timeline-prejoin-border: color-mix(in srgb, var(--brand-grey) 12%, transparent);
-
-  /* Wait zones */
-  --wait-stripe-a: rgba(196, 138, 0, 0.15);
-  --wait-stripe-b: rgba(196, 138, 0, 0.3);
-  --wait-stripe-alt-a: rgba(196, 138, 0, 0.05);
-  --wait-stripe-alt-b: rgba(196, 138, 0, 0.1);
-  --wait-border-strong: rgba(196, 138, 0, 0.35);
-  --wait-border-soft: rgba(196, 138, 0, 0.15);
-  --wait-progress-spec: rgba(0, 63, 135, 0.15);
-  --wait-progress-solid: rgba(0, 63, 135, 0.45);
-  --rank-axis-projected: #C48A00;
-
-  --danger-soft-bg: rgba(206, 17, 38, 0.08);
-  --danger-soft-border: rgba(206, 17, 38, 0.3);
-  --danger-soft-text: var(--brand-red);
-
-  /* Patches */
-  --patch-tan-1: var(--brand-tan);
-  --patch-tan-2: color-mix(in srgb, var(--brand-tan) 80%, black);
-  --patch-tan-3: color-mix(in srgb, var(--brand-tan) 60%, black);
-  --patch-tan-4: color-mix(in srgb, var(--brand-tan) 40%, black);
-
-  --surface-inset: color-mix(in srgb, var(--brand-grey) 6%, transparent);
-  --setup-section-surface: color-mix(in srgb, var(--brand-blue) 3%, transparent);
+  --shadow-float: 0 8px 24px rgba(31, 27, 22, 0.12);
 }
