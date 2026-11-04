@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { X } from "lucide-react";
 import type {
   GroupBadgeScout,
   GroupBadgeSuggestion,
@@ -13,14 +14,14 @@ interface Props {
 }
 
 const WINDOW_OPTIONS = [
-  { value: 12, label: "Turning 18 within 12 months" },
-  { value: 24, label: "Turning 18 within 24 months" },
-  { value: 36, label: "Turning 18 within 36 months" },
+  { value: 12, label: "18 within 12 months" },
+  { value: 24, label: "18 within 24 months" },
+  { value: 36, label: "18 within 36 months" },
 ];
 
 const FORMAT_LABEL: Record<GroupFormat, string> = {
-  meeting: "Meeting-friendly",
-  kickoff: "Kick off at a meeting",
+  meeting: "Fits a meeting",
+  kickoff: "Start at a meeting",
   outing: "Needs an outing",
 };
 
@@ -35,7 +36,8 @@ const ScoutChips: React.FC<{ scouts: GroupBadgeScout[] }> = ({ scouts }) => (
         className={`badge-planner__scout badge-planner__scout--${urgencyClass(s.monthsUntil18)}`}
         title={`${s.monthsUntil18} month${s.monthsUntil18 !== 1 ? "s" : ""} until 18`}
       >
-        {s.name} <span>{s.monthsUntil18}mo</span>
+        <span className="status-dot" aria-hidden />
+        {s.name} <span className="figure">{s.monthsUntil18} mo</span>
       </li>
     ))}
   </ul>
@@ -48,13 +50,13 @@ const SuggestionCard: React.FC<{ s: GroupBadgeSuggestion; rank?: number }> = ({
   <li className="badge-planner__item">
     <div className="badge-planner__item-header">
       {rank !== undefined && (
-        <span className="badge-planner__rank">{rank}</span>
+        <span className="badge-planner__rank figure">{rank}</span>
       )}
       <h4 className="badge-planner__badge">{s.host}</h4>
       <span className={`badge-planner__format badge-planner__format--${s.format}`}>
         {FORMAT_LABEL[s.format]}
       </span>
-      <span className="badge-planner__count">
+      <span className="badge-planner__count figure">
         {s.scouts.length} scout{s.scouts.length !== 1 ? "s" : ""}
       </span>
     </div>
@@ -76,11 +78,11 @@ export const MeritBadgePlanner: React.FC<Props> = ({ scouts, onClose }) => {
       <div className="badge-planner__header">
         <div>
           <h3 id="badge-planner-title" className="badge-planner__title">
-            Merit Badge Planner
+            Badge planner
           </h3>
           <p className="badge-planner__subtitle">
             Eagle-required badges to host, ranked by how many scouts need them
-            and how soon they turn 18.
+            and how soon they turn 18
           </p>
         </div>
         <div className="badge-planner__controls">
@@ -98,8 +100,14 @@ export const MeritBadgePlanner: React.FC<Props> = ({ scouts, onClose }) => {
               </option>
             ))}
           </select>
-          <button className="badge-planner__close" onClick={onClose}>
-            Done
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onClose}
+            aria-label="Close badge planner"
+            title="Close"
+          >
+            <X size={18} strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -143,8 +151,8 @@ export const MeritBadgePlanner: React.FC<Props> = ({ scouts, onClose }) => {
             Still short on electives
           </h4>
           <p className="badge-planner__note">
-            Any meeting-friendly elective these scouts haven't earned moves
-            them toward 21 badges.
+            Any elective these scouts haven't earned moves them toward 21
+            badges
           </p>
           <ScoutChips scouts={needElectives} />
         </div>

@@ -1,16 +1,17 @@
 import { useState, useEffect } from "react";
 import "./index.css";
-import "./App.css";
 import { ScoutRow } from "./components/ScoutRow";
 import { Setup } from "./components/Setup";
 import { MeritBadgePlanner } from "./components/MeritBadgePlanner";
 import type { ScoutAdvancement } from "./logic/advancement";
 import { getStatus, RANK_ORDER } from "./logic/advancement";
+import type { Status } from "./logic/advancement";
 import { auth } from "./api/auth";
 import { scoutingClient } from "./api/scoutingClient";
 import { cacheManager } from "./api/cache";
-import { parseISO, differenceInMonths } from "date-fns";
-import { Rocket, Users, Cog, Power, ArrowUpDown, Lightbulb } from "lucide-react";
+import { parseISO, differenceInMonths, addMonths } from "date-fns";
+import { Settings, LogOut, Search, ListChecks, X } from "lucide-react";
+import { BrandMark } from "./components/BrandMark";
 import { ThemeToggle } from "./theme/ThemeToggle";
 
 const SESSION_ENDED_NOTICE =
@@ -44,17 +45,14 @@ function App() {
 
   type SortOption = { value: string; label: string };
   const SORT_OPTIONS: SortOption[] = [
-    { value: "risk", label: "🚨 Most At-Risk First" },
-    {
-      value: "stagnant_desc",
-      label: "⏱️ Most Stagnant (Time Since Last Rank)",
-    },
-    { value: "last_name", label: "👤 Last Name, First Name" },
-    { value: "first_name", label: "👤 First Name, Last Name" },
-    { value: "age_desc", label: "⏳ Oldest First (Age ↓)" },
-    { value: "age_asc", label: "⏳ Youngest First (Age ↑)" },
-    { value: "rank_desc", label: "⭐ Highest Rank First" },
-    { value: "rank_asc", label: "⭐ Lowest Rank First" },
+    { value: "risk", label: "Most at risk" },
+    { value: "stagnant_desc", label: "Longest since last rank" },
+    { value: "last_name", label: "Last name" },
+    { value: "first_name", label: "First name" },
+    { value: "age_desc", label: "Oldest first" },
+    { value: "age_asc", label: "Youngest first" },
+    { value: "rank_desc", label: "Highest rank first" },
+    { value: "rank_asc", label: "Lowest rank first" },
   ];
 
   const STATUS_ORDER = { red: 0, yellow: 1, green: 2 };
@@ -414,335 +412,203 @@ function App() {
     }
   };
 
+  const now = new Date();
+  const statusCounts: Record<Status, number> = { red: 0, yellow: 0, green: 0 };
+  let turning18Soon = 0;
+  for (const s of scouts) {
+    statusCounts[getStatus(s.data as ScoutAdvancement)]++;
+    const dob = s.data?.dob ? parseISO(s.data.dob) : null;
+    if (dob && differenceInMonths(addMonths(dob, 18 * 12), now) < 12)
+      turning18Soon++;
+  }
+
+  const unitLabel = auth.getUnitLabel()?.trim() || "Troop";
+  const comparing = showComparison && selectedScouts.size > 0;
+
   return (
-    <div className="app-shell app-container">
-      <header className="app-header">
-        <div className="app-header__inner">
-          <div
-            className="app-header__brand"
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "1rem",
-            }}
-          >
-            <Rocket size={24} />
-            <h1>Troop Velocity Tracker</h1>
+    <div className="app">
+      <header className="topbar">
+        <div className="topbar__inner">
+          <div className="brand">
+            <BrandMark />
+            <span className="brand__name">Troop Velocity Tracker</span>
           </div>
+          {isAuthenticated && !showSettings && (
+            <div className="topbar__actions">
+              <ThemeToggle />
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setShowSettings(!showSettings)}
+                aria-label="Settings"
+                title="Settings"
+              >
+                <Settings size={18} strokeWidth={1.5} />
+              </button>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={handleLogout}
+                aria-label="Sign out"
+                title="Sign out"
+              >
+                <LogOut size={18} strokeWidth={1.5} />
+              </button>
+            </div>
+          )}
+          {(!isAuthenticated || showSettings) && (
+            <div className="topbar__actions">
+              <ThemeToggle />
+            </div>
+          )}
         </div>
       </header>
 
-      <main className="app-main">
+      <main className="page">
         {!isAuthenticated ? (
-          <div className="app-view app-view--setup">
-            <Setup
-              notice={sessionNotice}
-              onComplete={() => {
-                setSessionNotice("");
-                setIsAuthenticated(true);
-              }}
-            />
-          </div>
+          <Setup
+            notice={sessionNotice}
+            onComplete={() => {
+              setSessionNotice("");
+              setIsAuthenticated(true);
+            }}
+          />
         ) : showSettings ? (
-          <div className="app-view app-view--setup">
-            <Setup
-              onComplete={() => {
-                setIsAuthenticated(true);
-                setShowSettings(false);
-              }}
-              onCancel={() => setShowSettings(false)}
-              isEditing={true}
-              onClearCache={handleClearCache}
-            />
-          </div>
+          <Setup
+            onComplete={() => {
+              setIsAuthenticated(true);
+              setShowSettings(false);
+            }}
+            onCancel={() => setShowSettings(false)}
+            isEditing={true}
+            onClearCache={handleClearCache}
+          />
         ) : (
           <div className="dashboard">
-            <nav
-              className="dashboard-toolbar filter-header"
-              aria-label="Dashboard filters and actions"
-            >
-              <div
-                className="dashboard-toolbar__inner"
-                style={{
-                  maxWidth: "1200px",
-                  margin: "0 auto",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "1rem",
-                }}
-              >
-              <div
-                className="dashboard-toolbar__lead"
-                style={{ display: "flex", alignItems: "center", gap: "1rem" }}
-              >
-                <Users size={24} />
-                <div className="dashboard-toolbar__titles">
-                  <h2
-                    className="dashboard-toolbar__title"
-                    style={{ fontSize: "1.5rem", margin: 0 }}
-                  >
-                    {auth.getUnitLabel()?.trim() || "Troop"}{" "}
-                    {loading &&
-                      `(Loading ${loadingProgress.current}/${loadingProgress.total}…)`}
-                  </h2>
-                  <p
-                    className="dashboard-toolbar__meta"
-                    style={{
-                      fontSize: "0.85rem",
-                      color: "var(--text-dim)",
-                      margin: "0.25rem 0 0 0",
-                    }}
-                  >
-                    Displaying {filteredScouts.length}/{scouts.length} scouts
-                    {filteredOutCount > 0 && ` (${filteredOutCount} filtered)`}
-                    {lastLoadedTime &&
-                      ` • Last updated ${lastLoadedTime.toLocaleTimeString()}`}
-                  </p>
-                </div>
+            <section className="overview" aria-label="Troop summary">
+              <div className="overview__title">
+                <h1>{unitLabel}</h1>
+                <p className="overview__meta">
+                  {loading
+                    ? `Loading ${loadingProgress.current} of ${loadingProgress.total} scouts`
+                    : `${scouts.length} scouts working toward Eagle`}
+                  {filteredOutCount > 0 &&
+                    ` · ${filteredOutCount} Eagle or 18+ hidden`}
+                  {lastLoadedTime &&
+                    ` · Updated ${lastLoadedTime.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
+                </p>
               </div>
+              <dl className="overview__stats">
+                <div className="stat stat--red">
+                  <dt>
+                    <span className="status-dot" aria-hidden /> Urgent
+                  </dt>
+                  <dd className="figure">{statusCounts.red}</dd>
+                </div>
+                <div className="stat stat--yellow">
+                  <dt>
+                    <span className="status-dot" aria-hidden /> Watch
+                  </dt>
+                  <dd className="figure">{statusCounts.yellow}</dd>
+                </div>
+                <div className="stat stat--green">
+                  <dt>
+                    <span className="status-dot" aria-hidden /> On track
+                  </dt>
+                  <dd className="figure">{statusCounts.green}</dd>
+                </div>
+                <div className="stat">
+                  <dt>Turning 18 within a year</dt>
+                  <dd className="figure">{turning18Soon}</dd>
+                </div>
+              </dl>
+            </section>
 
-              <div
-                className="dashboard-toolbar__actions"
-                style={{
-                  display: "flex",
-                  gap: "0.5rem",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <label htmlFor="scout-search" className="sr-only">
-                  Filter scouts by name
-                </label>
+            <div className="listbar" role="toolbar" aria-label="Filter and sort scouts">
+              <label className="field field--search">
+                <Search size={16} strokeWidth={1.5} aria-hidden />
+                <span className="sr-only">Filter scouts by name</span>
                 <input
                   id="scout-search"
-                  className="dashboard-toolbar__search"
-                  type="text"
-                  placeholder="Filter by name..."
+                  type="search"
+                  placeholder="Filter by name"
                   value={searchFilter}
                   onChange={(e) => setSearchFilter(e.target.value)}
-                  style={{
-                    background: "var(--input-bg)",
-                    border: "1px solid var(--input-border)",
-                    color: "var(--text-main)",
-                    borderRadius: "0.5rem",
-                    padding: "0 0.75rem",
-                    height: "40px",
-                    fontSize: "0.95rem",
-                  }}
                 />
-                <div
-                  className="dashboard-toolbar__sort"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.4rem",
-                  }}
+              </label>
+              <label className="field field--select">
+                <span className="field__label">Sort</span>
+                <select
+                  id="scout-sort"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
                 >
-                  <ArrowUpDown size={14} />
-                  <label htmlFor="scout-sort" className="sr-only">
-                    Sort scouts list
-                  </label>
-                  <select
-                    id="scout-sort"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    style={{
-                      background: "var(--input-bg)",
-                      border: "1px solid var(--input-border)",
-                      color: "var(--text-main)",
-                      borderRadius: "0.5rem",
-                      padding: "0 0.75rem",
-                      height: "40px",
-                      fontSize: "0.95rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {SORT_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {selectedScouts.size > 0 && (
-                  <>
-                    <button
-                      onClick={() => setShowComparison(!showComparison)}
-                      style={{
-                        background: showComparison
-                          ? "var(--accent-ghost-active)"
-                          : "var(--accent-ghost)",
-                        color: "var(--accent)",
-                        border: `1px solid var(--accent)`,
-                        padding: "0.5rem 0.75rem",
-                        borderRadius: "0.5rem",
-                        fontSize: "0.9rem",
-                        cursor: "pointer",
-                        fontWeight: 600,
-                      }}
-                      title={`Compare ${selectedScouts.size} selected scout${selectedScouts.size !== 1 ? "s" : ""}`}
-                    >
-                      {showComparison
-                        ? `Viewing ${selectedScouts.size}`
-                        : `Compare (${selectedScouts.size})`}
-                    </button>
-                    {showComparison && (
-                      <button
-                        onClick={() => {
-                          setShowComparison(false);
-                          setSelectedScouts(new Set());
-                        }}
-                        style={{
-                          background: "var(--danger-soft-bg)",
-                          color: "var(--red)",
-                          border: "1px solid var(--red)",
-                          padding: "0.5rem 0.75rem",
-                          borderRadius: "0.5rem",
-                          fontSize: "0.9rem",
-                          cursor: "pointer",
-                          fontWeight: 600,
-                        }}
-                        title="Clear comparison"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </>
-                )}
-                <button
-                  onClick={() => setShowPlanner(!showPlanner)}
-                  aria-pressed={showPlanner}
-                  title="Suggest merit badges to host at troop meetings"
-                  style={{
-                    background: showPlanner
-                      ? "var(--accent-ghost-active)"
-                      : "var(--accent-ghost)",
-                    color: "var(--accent)",
-                    border: `1px solid var(--accent)`,
-                    padding: "0 0.75rem",
-                    height: "40px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.4rem",
-                    borderRadius: "0.5rem",
-                    fontSize: "0.9rem",
-                    cursor: "pointer",
-                    fontWeight: 600,
-                  }}
-                >
-                  <Lightbulb size={16} />
-                  Badge Planner
-                </button>
-                <ThemeToggle />
-                <button
-                  style={{
-                    background: "transparent",
-                    color: "var(--text-main)",
-                    border: "1px solid var(--card-border)",
-                    width: "44px",
-                    height: "44px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "0.5rem",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setShowSettings(!showSettings)}
-                  aria-label="Settings"
-                >
-                  <Cog 
-                    size={20} 
-                    strokeWidth={2.5} 
-                    color="currentColor"
-                    style={{ minWidth: '20px', minHeight: '20px' }}
-                  />
-                </button>
-                <button
-                  style={{
-                    background: "var(--danger-soft-bg)",
-                    color: "var(--red)",
-                    border: "1px solid var(--red)",
-                    width: "44px",
-                    height: "44px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "0.5rem",
-                    cursor: "pointer",
-                  }}
-                  onClick={handleLogout}
-                  aria-label="Logout"
-                >
-                  <Power 
-                    size={20} 
-                    strokeWidth={2.5} 
-                    color="currentColor"
-                    style={{ minWidth: '20px', minHeight: '20px' }}
-                  />
-                </button>
-              </div>
-            </div>
-          </nav>
-
-            {showComparison ? (
-              <div
-                className="comparison-panel"
-                style={{
-                  background: "var(--accent-ghost)",
-                  padding: "1.5rem",
-                  borderRadius: "1rem",
-                  border: "1px solid var(--card-border)",
-                  marginBottom: "2rem",
-                }}
-              >
-                <div
-                  className="comparison-panel__header"
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "1.5rem",
-                  }}
-                >
-                  <h3
-                    className="comparison-panel__title"
-                    style={{ fontSize: "1.2rem", fontWeight: 600 }}
-                  >
-                    Comparing {selectedScouts.size} Scout
-                    {selectedScouts.size !== 1 ? "s" : ""}
-                  </h3>
+                  {SORT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {selectedScouts.size > 0 && (
+                <div className="listbar__selection">
                   <button
+                    type="button"
+                    className="button button--secondary"
+                    aria-pressed={showComparison}
+                    onClick={() => setShowComparison(!showComparison)}
+                  >
+                    {showComparison
+                      ? "Show all scouts"
+                      : `Compare ${selectedScouts.size} selected`}
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    title="Clear selection"
+                    aria-label="Clear selection"
                     onClick={() => {
                       setShowComparison(false);
                       setSelectedScouts(new Set());
                     }}
-                    style={{
-                      background: "var(--input-bg)",
-                      border: "1px solid var(--card-border)",
-                      padding: "0.5rem 1rem",
-                      borderRadius: "0.5rem",
-                      cursor: "pointer",
-                      color: "var(--text-main)",
-                    }}
                   >
-                    Done
+                    <X size={16} strokeWidth={1.5} />
                   </button>
                 </div>
-              </div>
-            ) : null}
+              )}
+              <button
+                type="button"
+                className="button button--secondary listbar__planner"
+                onClick={() => setShowPlanner(!showPlanner)}
+                aria-pressed={showPlanner}
+                title="Suggest merit badges to host at troop meetings"
+              >
+                <ListChecks size={16} strokeWidth={1.5} />
+                Badge planner
+              </button>
+            </div>
 
-            {showPlanner && (
-              <MeritBadgePlanner
-                scouts={scouts}
-                onClose={() => setShowPlanner(false)}
-              />
-            )}
+            <div className={`workspace${showPlanner ? " workspace--planner" : ""}`}>
+              {showPlanner && (
+                <MeritBadgePlanner
+                  scouts={scouts}
+                  onClose={() => setShowPlanner(false)}
+                />
+              )}
 
-            <div className="dashboard-content content-with-offset">
-              <div className="scout-list">
+              <section className="roster" aria-label="Scouts">
+                <div className="roster__head" aria-hidden>
+                  <span />
+                  <span>
+                    {comparing
+                      ? `Comparing ${filteredScouts.length} scouts`
+                      : `Showing ${filteredScouts.length} of ${scouts.length}`}
+                  </span>
+                  <span className="roster__head-trail">
+                    Trail to Eagle, age 11 to 18
+                  </span>
+                  <span />
+                </div>
                 {filteredScouts.map((scout) => (
                   <ScoutRow
                     key={scout.userId}
@@ -763,37 +629,23 @@ function App() {
                   />
                 ))}
                 {filteredScouts.length === 0 && scouts.length > 0 && (
-                  <div
-                    className="scout-list-empty"
-                    style={{
-                      textAlign: "center",
-                      padding: "2rem",
-                      color: "var(--text-dim)",
-                    }}
-                  >
+                  <p className="roster__empty">
                     {showComparison
                       ? "No selected scouts to compare"
-                      : `No scouts match "${searchFilter}"`}
-                  </div>
+                      : `No scouts match “${searchFilter}”`}
+                  </p>
                 )}
-              </div>
+                {scouts.length === 0 && loading && (
+                  <p className="roster__empty">Loading roster</p>
+                )}
+              </section>
             </div>
           </div>
         )}
       </main>
 
-      <footer className="app-footer">
-        <div
-          className="app-footer__inner"
-          style={{
-            padding: "2rem",
-            textAlign: "center",
-            color: "var(--footer-text)",
-            fontSize: "0.8rem",
-          }}
-        >
-          Troop Velocity Tracker &copy; 2026 • Powered by Scoutbook API
-        </div>
+      <footer className="footer">
+        Troop Velocity Tracker © 2026 · Data from the Scoutbook API
       </footer>
     </div>
   );

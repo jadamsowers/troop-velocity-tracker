@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Loader2, LogIn, AlertCircle, ShieldCheck, Info } from "lucide-react";
+import { Loader2, AlertCircle, ShieldCheck, Info } from "lucide-react";
+import { RankPatch } from "./RankPatch";
+import { RANK_ORDER } from "../logic/advancement";
 import { auth } from "../api/auth";
 import type { LoginUnit } from "../api/auth";
 import { scoutingClient } from "../api/scoutingClient";
@@ -20,26 +22,6 @@ interface OrgRef {
   unitNumber?: string;
   number?: string;
 }
-
-const inputStyle: React.CSSProperties = {
-  padding: "0.85rem",
-  borderRadius: "0.75rem",
-  background: "var(--input-bg)",
-  border: "1px solid var(--input-border)",
-  color: "var(--text-main)",
-  fontSize: "0.95rem",
-  width: "100%",
-  boxSizing: "border-box",
-};
-
-const labelStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "0.4rem",
-  fontSize: "0.85rem",
-  fontWeight: 500,
-  width: "100%",
-};
 
 export const Setup: React.FC<Props> = ({
   onComplete,
@@ -169,412 +151,229 @@ export const Setup: React.FC<Props> = ({
 
   const signedIn = !!token;
 
-  return (
-    <div
-      className="setup setup-form"
-      style={{ maxWidth: "500px", margin: "0 auto" }}
-    >
-      <div className="setup__intro" style={{ textAlign: "center", marginBottom: "2rem" }}>
-        <h2 className="setup__title" style={{ fontSize: "1.5rem", fontWeight: "600" }}>
-          {isEditing ? "Settings" : "Sign in with my.scouting.org"}
-        </h2>
-        <p className="setup__subtitle" style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
-          Use the same account you use for Scoutbook and Internet Advancement
-        </p>
-      </div>
+  const errorBox = error && (
+    <div className="notice notice--error" role="alert">
+      <AlertCircle size={16} strokeWidth={1.5} />
+      {error}
+    </div>
+  );
 
-      <div className="setup__body" style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
-        {notice && !signedIn && (
-          <div
-            className="setup-notice"
-            role="status"
-            style={{
-              padding: "0.75rem 1rem",
-              borderRadius: "0.75rem",
-              background: "var(--accent-soft-bg)",
-              border: "1px solid var(--accent-soft-border)",
-              fontSize: "0.9rem",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
-          >
-            <Info size={16} color="var(--accent)" />
-            {notice}
+  const form = (
+    <div className="setup__panel">
+      {notice && !signedIn && (
+        <div className="notice" role="status">
+          <Info size={16} strokeWidth={1.5} />
+          {notice}
+        </div>
+      )}
+
+      {!signedIn && (
+        <>
+          <div className="setup__heading">
+            <h2>Sign in with my.scouting.org</h2>
+            <p>The same account you use for Scoutbook and Internet Advancement</p>
           </div>
-        )}
+          <form className="setup__form" onSubmit={handleSignIn}>
+            <label className="form-field">
+              <span>Username</span>
+              <input
+                type="text"
+                name="username"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={signingIn}
+              />
+            </label>
+            <label className="form-field">
+              <span>Password</span>
+              <input
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={signingIn}
+              />
+            </label>
 
-        {!signedIn && (
-          <section
-            className="setup-section setup-section--login"
-            style={{
-              background: "var(--setup-section-surface)",
-              padding: "1.5rem",
-              borderRadius: "1rem",
-              border: "1px solid var(--card-border)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "1.25rem",
-            }}
-          >
-            <form
-              className="setup-login-form"
-              onSubmit={handleSignIn}
-              style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+            {errorBox}
+
+            <button
+              type="submit"
+              disabled={signingIn || !username.trim() || !password}
+              className="button button--primary button--large"
             >
-              <label style={labelStyle}>
-                Username
+              {signingIn ? (
+                <>
+                  <Loader2 className="spin" size={18} strokeWidth={1.5} />
+                  Signing in
+                </>
+              ) : (
+                "Sign in"
+              )}
+            </button>
+          </form>
+
+          <button
+            type="button"
+            className="link-button setup__advanced"
+            onClick={() => setShowManualEntry(!showManualEntry)}
+            aria-expanded={showManualEntry}
+          >
+            {showManualEntry ? "Hide token sign-in" : "Sign in with an existing token"}
+          </button>
+
+          {showManualEntry && (
+            <div className="setup__manual">
+              <p>
+                If sign-in isn&apos;t working, paste a bearer token copied from an
+                advancements.scouting.org session.
+              </p>
+              <div className="setup__manual-row">
                 <input
-                  className="setup-login-username"
-                  type="text"
-                  name="username"
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={signingIn}
-                  style={inputStyle}
-                />
-              </label>
-              <label style={labelStyle}>
-                Password
-                <input
-                  className="setup-login-password"
                   type="password"
-                  name="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={signingIn}
-                  style={inputStyle}
+                  placeholder="Token"
+                  value={manualToken}
+                  onChange={(e) => setManualToken(e.target.value)}
+                  autoComplete="off"
                 />
-              </label>
-
-              {error && (
-                <div
-                  className="setup-error"
-                  role="alert"
-                  style={{
-                    padding: "0.75rem",
-                    borderRadius: "0.5rem",
-                    background: "var(--danger-soft-bg)",
-                    border: "1px solid var(--danger-soft-border)",
-                    color: "var(--danger-soft-text)",
-                    fontSize: "0.85rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={signingIn || !username.trim() || !password}
-                className="button-primary"
-                style={{
-                  padding: "0.85rem 2rem",
-                  fontSize: "1rem",
-                  fontWeight: "600",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.6rem",
-                  width: "100%",
-                  justifyContent: "center",
-                }}
-              >
-                {signingIn ? (
-                  <>
-                    <Loader2 className="animate-spin" size={18} />
-                    Signing in…
-                  </>
-                ) : (
-                  <>
-                    <LogIn size={18} />
-                    Sign in
-                  </>
-                )}
-              </button>
-            </form>
-
-            <div
-              className="setup-privacy"
-              style={{
-                padding: "1rem",
-                borderRadius: "0.75rem",
-                background: "var(--surface-inset)",
-                border: "1px solid var(--card-border)",
-                fontSize: "0.8rem",
-                lineHeight: "1.55",
-                color: "var(--text-dim)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  fontWeight: 600,
-                  color: "var(--text-main)",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                <ShieldCheck size={16} color="var(--accent)" />
-                How your sign-in is handled
-              </div>
-              <ul style={{ margin: 0, paddingLeft: "1.1rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                <li>
-                  This app uses your my.scouting.org username and password for
-                  one thing: signing in to scouting.org for you. It then reads
-                  your unit&apos;s advancement data.
-                </li>
-                <li>
-                  Your credentials go from this page to scouting.org through this
-                  app&apos;s server, because scouting.org doesn&apos;t let browser apps
-                  sign in directly. They are{" "}
-                  <strong>never logged, saved, or shared</strong>.
-                </li>
-                <li>
-                  scouting.org sends back a session token. That token is stored{" "}
-                  <strong>only in this browser&apos;s local storage</strong>. Your
-                  password is never stored anywhere.
-                </li>
-                <li>
-                  The token expires on its own, and then you&apos;ll be asked to sign
-                  in again. Sign out at any time to remove it from this browser.
-                </li>
-              </ul>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowManualEntry(!showManualEntry)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--text-dim)",
-                cursor: "pointer",
-                fontSize: "0.8rem",
-                textDecoration: "underline",
-                padding: "0.25rem",
-                alignSelf: "center",
-              }}
-            >
-              {showManualEntry ? "Hide advanced options" : "Advanced: use an existing token"}
-            </button>
-
-            {showManualEntry && (
-              <div
-                className="setup-manual-entry"
-                style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-              >
-                <p style={{ fontSize: "0.8rem", color: "var(--text-dim)", lineHeight: "1.5", margin: 0 }}>
-                  If sign-in isn&apos;t working, you can paste a bearer token
-                  copied from an advancements.scouting.org session.
-                </p>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <input
-                    className="setup-token-input"
-                    type="password"
-                    placeholder="Paste token…"
-                    value={manualToken}
-                    onChange={(e) => setManualToken(e.target.value)}
-                    autoComplete="off"
-                    style={{ ...inputStyle, fontSize: "0.85rem" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleManualToken}
-                    disabled={!manualToken.trim() || loadingUnits}
-                    className="button-secondary"
-                    style={{
-                      padding: "0 1rem",
-                      background: "var(--input-bg)",
-                      border: "1px solid var(--card-border)",
-                      color: "var(--text-main)",
-                      borderRadius: "0.75rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Use
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-        )}
-
-        {signedIn && (
-          <section
-            className="setup-section setup-section--unit"
-            style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
-          >
-            <h3 className="setup-section__title" style={{ fontSize: "1.1rem", fontWeight: "500", margin: 0 }}>
-              Choose your unit
-            </h3>
-
-            {error && (
-              <div
-                className="setup-error"
-                role="alert"
-                style={{
-                  padding: "0.75rem",
-                  borderRadius: "0.5rem",
-                  background: "var(--danger-soft-bg)",
-                  border: "1px solid var(--danger-soft-border)",
-                  color: "var(--danger-soft-text)",
-                  fontSize: "0.85rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                {error}
-              </div>
-            )}
-
-            {loadingUnits ? (
-              <div
-                className="setup-unit-loading"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  color: "var(--accent)",
-                  fontSize: "0.85rem",
-                  padding: "1rem",
-                }}
-              >
-                <Loader2 className="animate-spin" size={16} /> Fetching your
-                Scouting units...
-              </div>
-            ) : units.length > 0 ? (
-              <div
-                className="setup-unit-select-wrap"
-                style={{
-                  padding: "0.75rem",
-                  background: "var(--accent-soft-bg)",
-                  borderRadius: "0.75rem",
-                  border: "1px solid var(--accent-soft-border)",
-                }}
-              >
-                <select
-                  className="setup-unit-select"
-                  value={unitId}
-                  onChange={(e) => setUnitId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem",
-                    borderRadius: "0.5rem",
-                    background: "var(--surface-inset)",
-                    border: "1px solid var(--card-border)",
-                    color: "var(--text-main)",
-                    fontSize: "0.9rem",
-                  }}
-                >
-                  <option value="">Select unit...</option>
-                  {units.map((u) => (
-                    <option key={u.guid} value={u.guid}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div
-                className="setup-unit-manual"
-                style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-              >
-                <p style={{ fontSize: "0.85rem", color: "var(--text-dim)", textAlign: "center" }}>
-                  No units were found on your account. You can enter your Unit
-                  GUID manually:
-                </p>
-                <input
-                  className="setup-unit-guid-input"
-                  type="text"
-                  placeholder="Paste Unit GUID (e.g., XXXXXXXX-XXXX-XXXX-XXXX-...)"
-                  value={unitId}
-                  onChange={(e) => setUnitId(e.target.value)}
-                  style={{ ...inputStyle, fontSize: "0.8rem" }}
-                />
-              </div>
-            )}
-
-            <div className="setup-section__actions" style={{ display: "flex", gap: "1rem" }}>
-              {isEditing && onCancel && (
                 <button
-                  onClick={onCancel}
-                  className="button-secondary"
-                  style={{
-                    flex: 1,
-                    padding: "1rem",
-                    fontSize: "1rem",
-                    fontWeight: "600",
-                    background: "var(--input-bg)",
-                    border: "1px solid var(--card-border)",
-                    color: "var(--text-main)",
-                    borderRadius: "0.5rem",
-                    cursor: "pointer",
-                  }}
+                  type="button"
+                  onClick={handleManualToken}
+                  disabled={!manualToken.trim() || loadingUnits}
+                  className="button button--secondary"
                 >
-                  Cancel
+                  Use token
                 </button>
-              )}
-              <button
-                onClick={() => token && save(token, unitId, units)}
-                disabled={!token || !unitId}
-                className="button-primary"
-                style={{ flex: 1, padding: "1rem", fontSize: "1rem", fontWeight: "600" }}
-              >
-                {isEditing ? "Save Settings" : "Launch Troop Velocity Tracker"}
-              </button>
+              </div>
             </div>
-          </section>
-        )}
+          )}
+        </>
+      )}
 
-        {isEditing && onClearCache && (
-          <section
-            className="setup-section setup-section--cache"
-            style={{
-              borderTop: "1px solid var(--card-border)",
-              paddingTop: "2rem",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "1rem",
-            }}
-          >
-            <p style={{ fontSize: "0.85rem", color: "var(--text-dim)", textAlign: "center" }}>
-              Having trouble with stale data?
+      {signedIn && (
+        <section className="setup__section">
+          <div className="setup__heading">
+            <h2>{isEditing ? "Settings" : "Choose your unit"}</h2>
+            {isEditing && <p>Unit shown on the dashboard</p>}
+          </div>
+
+          {errorBox}
+
+          {loadingUnits ? (
+            <p className="setup__loading">
+              <Loader2 className="spin" size={16} strokeWidth={1.5} />
+              Finding your units
             </p>
+          ) : units.length > 0 ? (
+            <label className="form-field">
+              <span>Unit</span>
+              <select value={unitId} onChange={(e) => setUnitId(e.target.value)}>
+                <option value="">Select a unit</option>
+                {units.map((u) => (
+                  <option key={u.guid} value={u.guid}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label className="form-field">
+              <span>Unit GUID</span>
+              <input
+                type="text"
+                placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+                value={unitId}
+                onChange={(e) => setUnitId(e.target.value)}
+              />
+              <small>No units were found on your account, so enter the unit GUID</small>
+            </label>
+          )}
+
+          <div className="setup__actions">
+            {isEditing && onCancel && (
+              <button onClick={onCancel} className="button button--secondary button--large">
+                Cancel
+              </button>
+            )}
             <button
-              onClick={onClearCache}
-              style={{
-                background: "var(--danger-soft-bg)",
-                color: "var(--red)",
-                border: "1px solid var(--red)",
-                padding: "0.75rem 1.5rem",
-                borderRadius: "0.75rem",
-                fontSize: "0.9rem",
-                cursor: "pointer",
-                fontWeight: 600,
-                width: "100%",
-                transition: "background 0.2s, transform 0.1s",
-              }}
-              title="Clear cached scout data and refresh"
+              onClick={() => token && save(token, unitId, units)}
+              disabled={!token || !unitId}
+              className="button button--primary button--large"
             >
-              🚀 Clear Cached Data & Refresh
+              {isEditing ? "Save" : "Open dashboard"}
             </button>
-          </section>
-        )}
+          </div>
+        </section>
+      )}
+
+      {isEditing && onClearCache && (
+        <section className="setup__section setup__section--divided">
+          <div className="setup__heading">
+            <h3>Cached data</h3>
+            <p>Roster data is cached for an hour. Refresh it if something looks stale.</p>
+          </div>
+          <button onClick={onClearCache} className="button button--secondary">
+            Clear cache and reload
+          </button>
+        </section>
+      )}
+    </div>
+  );
+
+  if (isEditing) {
+    return <div className="setup setup--settings">{form}</div>;
+  }
+
+  return (
+    <div className="setup">
+      <div className="setup__intro">
+        <h1>Every scout&apos;s trail to Eagle, on one screen</h1>
+        <p className="setup__lede">
+          See who is on pace to finish before 18, who has stalled, and which
+          merit badges your troop should host next.
+        </p>
+        <div className="patch-row" aria-hidden>
+          {RANK_ORDER.map((rank) => (
+            <div key={rank} className="patch-row__item">
+              <RankPatch rank={rank} size={36} />
+              <span>{rank}</span>
+            </div>
+          ))}
+        </div>
+        <div className="privacy">
+          <h3>
+            <ShieldCheck size={16} strokeWidth={1.5} />
+            How your sign-in is handled
+          </h3>
+          <ul>
+            <li>
+              Your my.scouting.org username and password are used for one
+              thing: signing in to scouting.org for you, so the app can read your
+              unit&apos;s advancement data.
+            </li>
+            <li>
+              They pass through this app&apos;s server because scouting.org
+              doesn&apos;t let browser apps sign in directly. They are never
+              logged, saved or shared.
+            </li>
+            <li>
+              scouting.org returns a session token, stored only in this
+              browser&apos;s local storage. Your password is never stored.
+            </li>
+            <li>
+              The token expires on its own. Sign out at any time to remove it
+              from this browser.
+            </li>
+          </ul>
+        </div>
       </div>
+      {form}
     </div>
   );
 };
