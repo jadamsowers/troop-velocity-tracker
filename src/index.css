@@ -385,8 +385,20 @@ input::placeholder {
 
 .listbar__panels {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .listbar__panels {
+    width: 100%;
+  }
+
+  .listbar__panels .button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
 }
 
 /* ── Workspace: roster + optional planner column ──────────── */
