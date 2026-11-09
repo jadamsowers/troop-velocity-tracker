@@ -540,6 +540,29 @@ input::placeholder {
   color: var(--green);
 }
 
+.scout-row__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  margin-top: 2px;
+  list-style: none;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.scout-row__facts li + li::before {
+  content: "·";
+  margin-right: 6px;
+}
+
+.scout-row__fact--short {
+  color: var(--red);
+}
+
+.scout-row__fact--met {
+  color: var(--green);
+}
+
 .scout-row__mail {
   align-self: start;
 }

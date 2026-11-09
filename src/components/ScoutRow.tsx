@@ -11,6 +11,7 @@ import {
   WAIT_TIMES,
   calculateMissingEagleRequired,
   generateProgressReport,
+  getLeadershipProgress,
 } from "../logic/advancement";
 
 interface Props {
@@ -31,6 +32,17 @@ const PREREQUISITES: Record<string, string> = {
 // "Sep ’20" — one date format for every label on the trail
 const formatShort = (date: Date): string =>
   `${date.toLocaleDateString(undefined, { month: "short" })} ’${date.getFullYear().toString().slice(-2)}`;
+
+// Half-month precision reads naturally ("2.5 of 6 mo") without false accuracy.
+const formatMonths = (months: number) => String(Math.floor(months * 2) / 2);
+
+interface Fact {
+  key: string;
+  text: string;
+  title?: string;
+  /** "short" marks a fact that's holding the scout back. */
+  tone?: "short" | "met";
+}
 
 const formatLong = (date: Date): string =>
   date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -80,6 +92,22 @@ export const ScoutRow: React.FC<Props> = ({
 
   const status = getStatus(scoutData);
   const reason = getStatusReason(scoutData);
+
+  const facts: Fact[] = [];
+  const leadership = getLeadershipProgress(scoutData);
+  if (leadership) {
+    const met = leadership.months >= leadership.requiredMonths;
+    facts.push({
+      key: "leadership",
+      text: met
+        ? `Leadership time met for ${leadership.nextRank}`
+        : `Leadership ${formatMonths(leadership.months)} of ${leadership.requiredMonths} mo for ${leadership.nextRank}`,
+      title: leadership.current.length
+        ? `Current: ${leadership.current.join(", ")}`
+        : "No current leadership position",
+      tone: met ? "met" : leadership.current.length ? undefined : "short",
+    });
+  }
 
   const now = new Date();
   const dob = scoutData.dob ? parseISO(scoutData.dob) : null;
@@ -335,6 +363,19 @@ export const ScoutRow: React.FC<Props> = ({
               </div>
             )}
           </div>
+          {facts.length > 0 && (
+            <ul className="scout-row__facts">
+              {facts.map((f) => (
+                <li
+                  key={f.key}
+                  title={f.title}
+                  className={f.tone ? `scout-row__fact--${f.tone}` : undefined}
+                >
+                  {f.text}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
