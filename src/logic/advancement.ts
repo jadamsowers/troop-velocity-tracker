@@ -156,15 +156,15 @@ export function getStatusReason(scout: ScoutAdvancement): string {
     const monthsUntil18 = differenceInMonths(addMonths(dob, 18 * 12), now);
     const ageYears = differenceInYears(now, dob);
 
-    if (monthsUntil18 < 7) return `🚨 Only ${monthsUntil18} month${monthsUntil18 !== 1 ? 's' : ''} until age 18 — Eagle eligibility closing fast.`;
-    if (monthsUntil18 < 13) return `⚠️ Age ${ageYears}: ${monthsUntil18} months until 18 — needs to accelerate advancement.`;
+    if (monthsUntil18 < 7) return `${monthsUntil18} month${monthsUntil18 !== 1 ? 's' : ''} to 18, Eagle window closing`;
+    if (monthsUntil18 < 13) return `${monthsUntil18} months to 18, needs to speed up`;
 
     const earnedRanks = scout.ranks
         .filter(r => r.dateEarned)
         .sort((a, b) => RANK_ORDER.indexOf(a.rankName) - RANK_ORDER.indexOf(b.rankName));
 
     if (ageYears >= 12 && earnedRanks.length === 0) {
-        return `⚠️ Age ${ageYears} and no ranks earned yet — needs to start advancement trail toward Eagle.`;
+        return `No rank yet at age ${ageYears}`;
     }
 
     const currentRank = earnedRanks[earnedRanks.length - 1]?.rankName || 'None';
@@ -174,7 +174,7 @@ export function getStatusReason(scout: ScoutAdvancement): string {
         const lastRankDate = parseISO(earnedRanks[earnedRanks.length - 1].dateEarned!);
         const monthsSince = differenceInMonths(now, lastRankDate);
         if (differenceInYears(now, lastRankDate) >= 1) {
-            return `⚠️ No rank advancement in ${monthsSince} months. Last rank: ${currentRank}.`;
+            return `No new rank in ${monthsSince} months`;
         }
     }
 
@@ -183,14 +183,14 @@ export function getStatusReason(scout: ScoutAdvancement): string {
         const waitPeriod = WAIT_TIMES[nextRank];
         const eligibilityDate = addMonths(lastRankDate, waitPeriod);
         if (isAfter(now, addMonths(eligibilityDate, 3))) {
-            return `⚠️ Eligible for ${nextRank} since ${eligibilityDate.toLocaleDateString()} but hasn't advanced.`;
+            return `Eligible for ${nextRank} since ${eligibilityDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`;
         }
     }
 
     if (nextRank && MERIT_BADGE_REQUIREMENTS[nextRank]) {
         const required = MERIT_BADGE_REQUIREMENTS[nextRank];
         if (scout.meritBadgeCount < required) {
-            return `${scout.meritBadgeCount < required - 2 ? '🚨' : '⚠️'} Needs ${required - scout.meritBadgeCount} more merit badge${required - scout.meritBadgeCount !== 1 ? 's' : ''} for ${nextRank} (has ${scout.meritBadgeCount}/${required}).`;
+            return `Needs ${required - scout.meritBadgeCount} more merit badge${required - scout.meritBadgeCount !== 1 ? 's' : ''} for ${nextRank}`;
         }
     }
 
@@ -198,11 +198,11 @@ export function getStatusReason(scout: ScoutAdvancement): string {
     if (currentRank === 'Life' && nextRank === 'Eagle') {
         const missingEagleReqs = calculateMissingEagleRequired(scout.earnedMeritBadges);
         if (missingEagleReqs.length <= 3) {
-            return `✅ Life rank working toward Eagle with strong progress — on track with time to spare!`;
+            return `On track for Eagle with time to spare`;
         }
     }
 
-    return '✅ On track — advancing well toward Eagle.';
+    return 'On track';
 }
 
 export function generateProgressReport(scout: ScoutAdvancement, firstName: string): string {

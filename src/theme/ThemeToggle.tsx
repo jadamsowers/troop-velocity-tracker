@@ -18,12 +18,12 @@ export const ThemeToggle: React.FC = () => {
   return (
     <button
       type="button"
-      className="theme-toggle"
+      className="icon-button"
       onClick={cyclePreference}
       title={`Theme: ${labels[preference]} (click to change)`}
       aria-label={`Theme: ${labels[preference]}. Click to cycle light, dark, or system.`}
     >
-      <Icon size={20} strokeWidth={2} />
+      <Icon size={18} strokeWidth={1.5} />
     </button>
   );
 };
