@@ -57,6 +57,18 @@ export interface RosterResponse {
     }>;
 }
 
+export type UnitLeadershipResponse = Array<{
+    userId: number;
+    memberId: number;
+    leadershipPositionHistory?: Array<{
+        position: string;
+        startDate?: string;
+        /** Empty or missing while the scout still holds the position. */
+        endDate?: string | null;
+        approved?: boolean;
+    }>;
+}>;
+
 export interface UnitAdultsResponse {
     users?: Array<{
         memberId: number;
@@ -91,6 +103,10 @@ export const scoutingClient = {
 
     getUnitRoster: (unitGuid: string): Promise<RosterResponse> =>
         scoutingFetch(`/organizations/v2/units/${unitGuid}/youths`),
+
+    /** Every youth in the unit with their full leadership position history. */
+    getUnitLeadershipPositions: (unitGuid: string): Promise<UnitLeadershipResponse> =>
+        scoutingFetch(`/organizations/v2/units/${unitGuid}/leadershipPositions`),
 
     getUnitAdults: (unitGuid: string): Promise<UnitAdultsResponse> =>
         scoutingFetch(`/organizations/v2/units/${unitGuid}/adults`),

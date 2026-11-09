@@ -8,7 +8,7 @@ import type { CounselorLoad } from "./components/CounselorPanel";
 import { loadUnitCounselors } from "./api/counselors";
 import type { ScoutAdvancement } from "./logic/advancement";
 import { getStatus, RANK_ORDER } from "./logic/advancement";
-import type { Status } from "./logic/advancement";
+import type { LeadershipPosition, Status } from "./logic/advancement";
 import { auth } from "./api/auth";
 import { scoutingClient } from "./api/scoutingClient";
 import { cacheManager } from "./api/cache";
@@ -192,7 +192,27 @@ function App() {
     setLoadingProgress({ current: 0, total: 0 });
     const allScouts: any[] = [];
     try {
-      const roster = await scoutingClient.getUnitRoster(unitId);
+      const [roster, leadershipRes] = await Promise.all([
+        scoutingClient.getUnitRoster(unitId),
+        // One call covers every scout; if it fails, cards just omit leadership.
+        scoutingClient.getUnitLeadershipPositions(unitId).catch((err) => {
+          console.warn("Leadership positions unavailable", err);
+          return null;
+        }),
+      ]);
+      const leadershipByUser = new Map<number, LeadershipPosition[]>();
+      for (const youth of leadershipRes ?? []) {
+        leadershipByUser.set(
+          youth.userId,
+          (youth.leadershipPositionHistory ?? [])
+            .filter((p) => p.startDate && p.approved !== false)
+            .map((p) => ({
+              position: p.position,
+              startDate: p.startDate!,
+              endDate: p.endDate || undefined,
+            })),
+        );
+      }
       const allRosterUsers = roster.users || [];
       const now = new Date();
       const users = allRosterUsers.filter((youth: any) => {
@@ -361,6 +381,9 @@ function App() {
                 earnedMeritBadges,
                 scoutEmail,
                 parentEmails,
+                leadership: leadershipRes
+                  ? leadershipByUser.get(youth.userId) ?? []
+                  : undefined,
                 nickname: youth.nickname || profile?.nickname,
               } as ScoutAdvancement,
             };

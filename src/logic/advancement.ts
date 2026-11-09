@@ -8,9 +8,18 @@ export interface RankDate {
     dateEarned?: string;
 }
 
+export interface LeadershipPosition {
+    position: string;
+    startDate: string;
+    /** Missing while the position is still held. */
+    endDate?: string;
+}
+
 export interface ScoutAdvancement {
     dob: string;
     ranks: RankDate[];
+    /** Undefined when leadership data couldn't be loaded (or predates this field in cache). */
+    leadership?: LeadershipPosition[];
     meritBadgeCount: number;
     earnedMeritBadges: string[];
     scoutEmail?: string;
@@ -65,6 +74,71 @@ export const WAIT_TIMES: Record<string, number> = {
     'Life': 6, // 6 months after Star
     'Eagle': 6 // 6 months after Life
 };
+
+// Months in a position of responsibility, served while holding the previous rank.
+export const LEADERSHIP_MONTHS: Record<string, number> = { Star: 4, Life: 6, Eagle: 6 };
+
+const DAYS_PER_MONTH = 30.4375;
+
+export interface LeadershipProgress {
+    nextRank: string;
+    requiredMonths: number;
+    /** Months served since the current rank was earned (overlapping positions count once). */
+    months: number;
+    /** Positions held today. */
+    current: string[];
+}
+
+/**
+ * Leadership time toward Star, Life or Eagle: days in any position since the
+ * current rank was earned, merging overlaps so two positions held at once
+ * don't double-count. Null when the next rank has no leadership requirement
+ * or the data isn't loaded.
+ */
+export function getLeadershipProgress(scout: ScoutAdvancement, now = new Date()): LeadershipProgress | null {
+    if (!scout.leadership) return null;
+    const earned = scout.ranks
+        .filter(r => r.dateEarned)
+        .sort((a, b) => RANK_ORDER.indexOf(a.rankName) - RANK_ORDER.indexOf(b.rankName));
+    const current = earned.at(-1);
+    if (!current) return null;
+    const nextRank = RANK_ORDER[RANK_ORDER.indexOf(current.rankName) + 1];
+    const requiredMonths = LEADERSHIP_MONTHS[nextRank];
+    if (!requiredMonths) return null;
+
+    const since = parseISO(current.dateEarned!).getTime();
+    const today = now.getTime();
+    const spans = scout.leadership
+        .map(p => [
+            Math.max(parseISO(p.startDate).getTime(), since),
+            Math.min(p.endDate ? parseISO(p.endDate).getTime() : today, today),
+        ])
+        .filter(([start, end]) => end > start)
+        .sort((a, b) => a[0] - b[0]);
+
+    // Merge overlaps, then count each span in calendar months (Feb 9 to Jun 9
+    // is 4 months) with leftover days as a fraction.
+    const merged: [number, number][] = [];
+    for (const [start, end] of spans) {
+        const last = merged.at(-1);
+        if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+        else merged.push([start, end]);
+    }
+    let months = 0;
+    for (const [start, end] of merged) {
+        const whole = differenceInMonths(end, start);
+        months += whole + (end - addMonths(start, whole).getTime()) / 86_400_000 / DAYS_PER_MONTH;
+    }
+
+    return {
+        nextRank,
+        requiredMonths,
+        months,
+        current: scout.leadership
+            .filter(p => !p.endDate || parseISO(p.endDate).getTime() >= today)
+            .map(p => p.position),
+    };
+}
 
 const MERIT_BADGE_REQUIREMENTS: Record<string, number> = {
     'Star': 6,
@@ -176,6 +250,18 @@ export function getStatusReason(scout: ScoutAdvancement): string {
         const monthsSince = differenceInMonths(now, lastRankDate);
         if (differenceInYears(now, lastRankDate) >= 1) {
             return `No new rank in ${monthsSince} months`;
+        }
+    }
+
+    // Past the rank's time requirement but short on leadership time: that's the blocker.
+    const leadership = getLeadershipProgress(scout, now);
+    if (leadership && nextRank && WAIT_TIMES[nextRank] && earnedRanks.length > 0) {
+        const lastRankDate = parseISO(earnedRanks[earnedRanks.length - 1].dateEarned!);
+        const short = leadership.requiredMonths - leadership.months;
+        if (differenceInMonths(now, lastRankDate) >= WAIT_TIMES[nextRank] && short >= 0.5) {
+            return leadership.current.length
+                ? `${Math.ceil(short)} more month${Math.ceil(short) !== 1 ? 's' : ''} of leadership for ${nextRank}`
+                : `Needs a leadership position for ${nextRank}`;
         }
     }
 
