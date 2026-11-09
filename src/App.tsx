@@ -252,10 +252,13 @@ function App() {
         users.map(async (youth: any) => {
           const userId = String(youth.userId);
           try {
-            const [ranksRes, mbRes] = await Promise.allSettled([
+            const [ranksRes, mbRes, activityRes] = await Promise.allSettled([
               scoutingClient.getRanks(userId),
               scoutingClient.getMeritBadges(userId),
+              scoutingClient.getActivitySummary(userId),
             ]);
+            const activitySummary =
+              activityRes.status === "fulfilled" ? activityRes.value : null;
 
             const rawRanks =
               ranksRes.status === "fulfilled" ? ranksRes.value : null;
@@ -381,6 +384,13 @@ function App() {
                 earnedMeritBadges,
                 scoutEmail,
                 parentEmails,
+                activity: activitySummary
+                  ? {
+                      campingNights: activitySummary.campingLogs?.totalNumberOfNights ?? 0,
+                      serviceHours: activitySummary.serviceLogs?.totalNumberOfHours ?? 0,
+                      hikingMiles: activitySummary.hikingLogs?.totalNumberOfMiles ?? 0,
+                    }
+                  : undefined,
                 leadership: leadershipRes
                   ? leadershipByUser.get(youth.userId) ?? []
                   : undefined,

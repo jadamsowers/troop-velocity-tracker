@@ -15,11 +15,22 @@ export interface LeadershipPosition {
     endDate?: string;
 }
 
+export interface ActivityTotals {
+    campingNights: number;
+    serviceHours: number;
+    hikingMiles: number;
+}
+
+// Camping merit badge requires 20 nights of camping.
+export const CAMPING_MB_NIGHTS = 20;
+
 export interface ScoutAdvancement {
     dob: string;
     ranks: RankDate[];
     /** Undefined when leadership data couldn't be loaded (or predates this field in cache). */
     leadership?: LeadershipPosition[];
+    /** Lifetime totals from activity logs; undefined when unavailable. */
+    activity?: ActivityTotals;
     meritBadgeCount: number;
     earnedMeritBadges: string[];
     scoutEmail?: string;
