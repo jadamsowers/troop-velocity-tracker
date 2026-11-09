@@ -69,6 +69,12 @@ export type UnitLeadershipResponse = Array<{
     }>;
 }>;
 
+export interface ActivitySummaryResponse {
+    campingLogs?: { totalNumberOfNights?: number; totalNumberOfDays?: number };
+    hikingLogs?: { totalNumberOfMiles?: number };
+    serviceLogs?: { totalNumberOfHours?: number };
+}
+
 export interface UnitAdultsResponse {
     users?: Array<{
         memberId: number;
@@ -125,6 +131,10 @@ export const scoutingClient = {
 
     getRanks: (userId: string) =>
         scoutingFetch(`/advancements/v2/youth/${userId}/ranks`),
+
+    /** Lifetime camping, hiking and service totals from Scoutbook activity logs. */
+    getActivitySummary: (userId: string): Promise<ActivitySummaryResponse> =>
+        scoutingFetch(`/advancements/v2/${userId}/userActivitySummary`),
 
     getMeritBadges: (userId: string) =>
         scoutingFetch(`/advancements/v2/youth/${userId}/meritBadges`),

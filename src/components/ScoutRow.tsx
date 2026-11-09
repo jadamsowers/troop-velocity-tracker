@@ -12,6 +12,7 @@ import {
   calculateMissingEagleRequired,
   generateProgressReport,
   getLeadershipProgress,
+  CAMPING_MB_NIGHTS,
 } from "../logic/advancement";
 
 interface Props {
@@ -107,6 +108,33 @@ export const ScoutRow: React.FC<Props> = ({
         : "No current leadership position",
       tone: met ? "met" : leadership.current.length ? undefined : "short",
     });
+  }
+  if (scoutData.activity) {
+    const { campingNights, serviceHours } = scoutData.activity;
+    const hasCampingMb = scoutData.earnedMeritBadges.some(
+      (b) => b.trim().toLowerCase() === "camping",
+    );
+    facts.push(
+      hasCampingMb
+        ? { key: "camping", text: `Camping ${campingNights} night${campingNights !== 1 ? "s" : ""}` }
+        : campingNights >= CAMPING_MB_NIGHTS
+          ? {
+              key: "camping",
+              text: `Camping ${campingNights} nights`,
+              title: `Enough nights for Camping merit badge (${CAMPING_MB_NIGHTS})`,
+              tone: "met",
+            }
+          : {
+              key: "camping",
+              text: `Camping ${campingNights} of ${CAMPING_MB_NIGHTS} nights`,
+              title: `Camping merit badge needs ${CAMPING_MB_NIGHTS} nights`,
+            },
+      {
+        key: "service",
+        text: `Service ${Math.round(serviceHours * 10) / 10} hr`,
+        title: "Lifetime service hours logged in Scoutbook",
+      },
+    );
   }
 
   const now = new Date();
