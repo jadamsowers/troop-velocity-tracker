@@ -1,4 +1,5 @@
 import { differenceInMonths, differenceInYears, addMonths, isAfter, parseISO } from 'date-fns';
+import type { CounselorRef } from './counselors';
 
 export type Status = 'green' | 'yellow' | 'red';
 
@@ -305,6 +306,15 @@ export const GROUP_BADGE_FORMATS: Record<string, { host: string; format: GroupFo
     'Family Life': { host: 'Family Life', format: 'kickoff', note: 'Discussions fit a meeting; the 90-day chore log and family project happen at home.' },
 };
 
+// Formats for the non-default options in OR buckets, used when the unit can
+// only counsel the alternative.
+const ALTERNATE_FORMATS: Record<string, GroupFormat> = {
+    'Lifesaving': 'outing',
+    'Sustainability': 'kickoff',
+    'Cycling': 'outing',
+    'Swimming': 'outing',
+};
+
 const FORMAT_ORDER: Record<GroupFormat, number> = { meeting: 0, kickoff: 1, outing: 2 };
 
 export interface GroupBadgeScout {
@@ -319,6 +329,10 @@ export interface GroupBadgeSuggestion {
     note: string;
     score: number;
     scouts: GroupBadgeScout[];
+    /** Unit counselors for `host`; undefined when counselor data isn't loaded. */
+    counselors?: CounselorRef[];
+    /** Other options in an OR bucket that the unit can also counsel. */
+    alternates?: { badge: string; counselors: CounselorRef[] }[];
 }
 
 // Scouts with less runway count for more, so a badge three 17-year-olds need
@@ -329,9 +343,15 @@ function urgencyWeight(monthsUntil18: number): number {
     return 1;
 }
 
+/**
+ * Rank Eagle-required buckets to host at meetings. With `counselorsFor`,
+ * badges the unit can counsel rank first, then by urgency-weighted demand,
+ * then 2+ counselors ahead of one, then meeting-friendly formats.
+ */
 export function suggestGroupMeritBadges(
     scouts: { firstName: string; lastName: string; data: ScoutAdvancement }[],
     windowMonths: number,
+    counselorsFor?: (badge: string) => CounselorRef[],
 ): { suggestions: GroupBadgeSuggestion[]; scoutsInWindow: number; needElectives: GroupBadgeScout[] } {
     const now = new Date();
     const byBucket = new Map<string, GroupBadgeSuggestion>();
@@ -362,14 +382,40 @@ export function suggestGroupMeritBadges(
         }
     }
 
+    const covered = (s: GroupBadgeSuggestion) => (s.counselors?.length ? 1 : 0);
+    const deep = (s: GroupBadgeSuggestion) => ((s.counselors?.length ?? 0) >= 2 ? 1 : 0);
     const suggestions = [...byBucket.values()]
         .map(s => ({ ...s, scouts: s.scouts.sort((a, b) => a.monthsUntil18 - b.monthsUntil18) }))
+        .map(s => (counselorsFor ? withCounselors(s, counselorsFor) : s))
         .sort((a, b) =>
+            covered(b) - covered(a) ||
             b.score - a.score ||
+            deep(b) - deep(a) ||
             FORMAT_ORDER[a.format] - FORMAT_ORDER[b.format] ||
             b.scouts.length - a.scouts.length ||
             a.host.localeCompare(b.host));
     needElectives.sort((a, b) => a.monthsUntil18 - b.monthsUntil18);
 
     return { suggestions, scoutsInWindow, needElectives };
+}
+
+function withCounselors(
+    s: GroupBadgeSuggestion,
+    counselorsFor: (badge: string) => CounselorRef[],
+): GroupBadgeSuggestion {
+    const options = EAGLE_REQUIRED_BUCKETS.find(b => b.name === s.bucket)?.options ?? [s.host];
+    const byOption = options.map(badge => ({ badge, counselors: counselorsFor(badge) }));
+    const host = byOption.find(o => o.badge === s.host) ?? byOption[0];
+    // If nobody counsels the default pick but someone counsels an
+    // alternative, suggest the alternative the troop can actually run.
+    const pick = host.counselors.length ? host : byOption.find(o => o.counselors.length) ?? host;
+    const switched = pick.badge !== s.host;
+    return {
+        ...s,
+        host: pick.badge,
+        format: switched ? ALTERNATE_FORMATS[pick.badge] ?? s.format : s.format,
+        note: switched ? `Hosting ${pick.badge}: the unit has a counselor for it but not ${s.host}.` : s.note,
+        counselors: pick.counselors,
+        alternates: byOption.filter(o => o.badge !== pick.badge && o.counselors.length),
+    };
 }

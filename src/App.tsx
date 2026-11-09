@@ -3,6 +3,9 @@ import "./index.css";
 import { ScoutRow } from "./components/ScoutRow";
 import { Setup } from "./components/Setup";
 import { MeritBadgePlanner } from "./components/MeritBadgePlanner";
+import { CounselorPanel } from "./components/CounselorPanel";
+import type { CounselorLoad } from "./components/CounselorPanel";
+import { loadUnitCounselors } from "./api/counselors";
 import type { ScoutAdvancement } from "./logic/advancement";
 import { getStatus, RANK_ORDER } from "./logic/advancement";
 import type { Status } from "./logic/advancement";
@@ -10,7 +13,7 @@ import { auth } from "./api/auth";
 import { scoutingClient } from "./api/scoutingClient";
 import { cacheManager } from "./api/cache";
 import { parseISO, differenceInMonths, addMonths } from "date-fns";
-import { Settings, LogOut, Search, ListChecks, X } from "lucide-react";
+import { Settings, LogOut, Search, ListChecks, Users, X } from "lucide-react";
 import { BrandMark } from "./components/BrandMark";
 import { ThemeToggle } from "./theme/ThemeToggle";
 
@@ -40,7 +43,9 @@ function App() {
   const [searchFilter, setSearchFilter] = useState("");
   const [selectedScouts, setSelectedScouts] = useState<Set<number>>(new Set());
   const [showComparison, setShowComparison] = useState(false);
-  const [showPlanner, setShowPlanner] = useState(false);
+  // One side panel at a time: the badge planner or the counselor roster.
+  const [sidePanel, setSidePanel] = useState<"planner" | "counselors" | null>(null);
+  const [counselorLoad, setCounselorLoad] = useState<CounselorLoad | null>(null);
   const [filteredOutCount, setFilteredOutCount] = useState(0);
 
   type SortOption = { value: string; label: string };
@@ -397,14 +402,43 @@ function App() {
     }
   };
 
+  // Counselor profiles are one request per adult, so only fetch them once a
+  // panel that uses them is opened.
+  const loadCounselors = async (refresh = false) => {
+    const unitId = auth.getUnitId();
+    if (!unitId) return;
+    setCounselorLoad({ state: "loading", done: 0, total: 0 });
+    try {
+      const counselors = await loadUnitCounselors(unitId, {
+        refresh,
+        onProgress: (done, total) => setCounselorLoad({ state: "loading", done, total }),
+      });
+      if (auth.getUnitId() === unitId) setCounselorLoad({ state: "ready", counselors });
+    } catch (e) {
+      setCounselorLoad({
+        state: "error",
+        message: e instanceof Error ? e.message : "unknown error",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (sidePanel && isAuthenticated && counselorLoad === null) loadCounselors();
+  }, [sidePanel, isAuthenticated, counselorLoad]);
+
+  const togglePanel = (panel: "planner" | "counselors") =>
+    setSidePanel((open) => (open === panel ? null : panel));
+
   const handleLogout = () => {
     auth.logout();
     setIsAuthenticated(false);
     setScouts([]);
+    setCounselorLoad(null);
   };
 
   const handleClearCache = () => {
     cacheManager.clear();
+    setCounselorLoad(null);
     setScouts([]);
     const unitId = auth.getUnitId();
     if (unitId) {
@@ -576,23 +610,44 @@ function App() {
                   </button>
                 </div>
               )}
-              <button
-                type="button"
-                className="button button--secondary listbar__planner"
-                onClick={() => setShowPlanner(!showPlanner)}
-                aria-pressed={showPlanner}
-                title="Suggest merit badges to host at troop meetings"
-              >
-                <ListChecks size={16} strokeWidth={1.5} />
-                Badge planner
-              </button>
+              <div className="listbar__panels">
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => togglePanel("counselors")}
+                  aria-pressed={sidePanel === "counselors"}
+                  title="Merit badge counselors in the unit and the badges they cover"
+                >
+                  <Users size={16} strokeWidth={1.5} />
+                  Counselors
+                </button>
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => togglePanel("planner")}
+                  aria-pressed={sidePanel === "planner"}
+                  title="Suggest merit badges to host at troop meetings"
+                >
+                  <ListChecks size={16} strokeWidth={1.5} />
+                  Badge planner
+                </button>
+              </div>
             </div>
 
-            <div className={`workspace${showPlanner ? " workspace--planner" : ""}`}>
-              {showPlanner && (
+            <div className={`workspace${sidePanel ? " workspace--planner" : ""}`}>
+              {sidePanel === "planner" && (
                 <MeritBadgePlanner
                   scouts={scouts}
-                  onClose={() => setShowPlanner(false)}
+                  counselors={counselorLoad?.state === "ready" ? counselorLoad.counselors : null}
+                  onClose={() => setSidePanel(null)}
+                />
+              )}
+              {sidePanel === "counselors" && counselorLoad && (
+                <CounselorPanel
+                  load={counselorLoad}
+                  scouts={scouts}
+                  onClose={() => setSidePanel(null)}
+                  onRefresh={() => loadCounselors(true)}
                 />
               )}
 

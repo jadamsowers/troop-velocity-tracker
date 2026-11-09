@@ -56,6 +56,18 @@ export const cacheManager = {
     }
   },
 
+  remove: (unitId: string): void => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (!cached) return;
+      const cacheData: CacheData = JSON.parse(cached);
+      delete cacheData[unitId];
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+    } catch (e) {
+      console.error('Failed to update cache:', e);
+    }
+  },
+
   clear: (): void => {
     try {
       localStorage.removeItem(CACHE_KEY);

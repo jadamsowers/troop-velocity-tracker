@@ -57,11 +57,46 @@ export interface RosterResponse {
     }>;
 }
 
+export interface UnitAdultsResponse {
+    users?: Array<{
+        memberId: number;
+        firstName: string;
+        lastName: string;
+        nickName?: string | null;
+    }>;
+}
+
+export interface CounselorProfileResponse {
+    memberId: number;
+    firstName?: string;
+    lastName?: string;
+    nickName?: string;
+    email?: { email?: string } | null;
+    phone?: { fullPhoneNumber?: string } | null;
+    counselorAvailabilityShort?: string;
+    counselorAvailabilityLong?: string;
+    hasValidRegistration?: boolean;
+    meritBadges?: Array<{
+        meritBadgeId: number;
+        meritBadgeName: string;
+        effectiveDt?: string;
+        /** Empty string when the approval is open-ended. */
+        expiryDt?: string;
+    }>;
+    youths?: unknown[];
+}
+
 export const scoutingClient = {
     setSetupMode: (mode: boolean) => { isInSetupMode = mode; },
 
     getUnitRoster: (unitGuid: string): Promise<RosterResponse> =>
         scoutingFetch(`/organizations/v2/units/${unitGuid}/youths`),
+
+    getUnitAdults: (unitGuid: string): Promise<UnitAdultsResponse> =>
+        scoutingFetch(`/organizations/v2/units/${unitGuid}/adults`),
+
+    getCounselorProfile: (memberId: number): Promise<CounselorProfileResponse> =>
+        scoutingFetch(`/advancements/v2/meritBadges/counselors/${memberId}/profile`),
 
     getPersonProfile: (userId: string) =>
         scoutingFetch(`/persons/v2/${userId}/personprofile`),
