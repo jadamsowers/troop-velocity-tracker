@@ -4,6 +4,9 @@ import { ScoutRow } from "./components/ScoutRow";
 import { Setup } from "./components/Setup";
 import { MeritBadgePlanner } from "./components/MeritBadgePlanner";
 import { CounselorPanel } from "./components/CounselorPanel";
+import { RankPlanner } from "./components/RankPlanner";
+import type { RankRequirementsLoad } from "./components/RankPlanner";
+import { loadRankRequirements } from "./api/rankRequirements";
 import type { CounselorLoad } from "./components/CounselorPanel";
 import { loadUnitCounselors } from "./api/counselors";
 import type { ScoutAdvancement } from "./logic/advancement";
@@ -13,7 +16,7 @@ import { auth } from "./api/auth";
 import { scoutingClient } from "./api/scoutingClient";
 import { cacheManager } from "./api/cache";
 import { parseISO, differenceInMonths, addMonths } from "date-fns";
-import { Settings, LogOut, Search, ListChecks, Users, X } from "lucide-react";
+import { Settings, LogOut, Search, ListChecks, ClipboardList, Users, X } from "lucide-react";
 import { BrandMark } from "./components/BrandMark";
 import { ThemeToggle } from "./theme/ThemeToggle";
 
@@ -43,8 +46,10 @@ function App() {
   const [searchFilter, setSearchFilter] = useState("");
   const [selectedScouts, setSelectedScouts] = useState<Set<number>>(new Set());
   const [showComparison, setShowComparison] = useState(false);
-  // One side panel at a time: the badge planner or the counselor roster.
-  const [sidePanel, setSidePanel] = useState<"planner" | "counselors" | null>(null);
+  // One side panel at a time.
+  type SidePanel = "ranks" | "planner" | "counselors";
+  const [sidePanel, setSidePanel] = useState<SidePanel | null>(null);
+  const [rankLoad, setRankLoad] = useState<RankRequirementsLoad | null>(null);
   const [counselorLoad, setCounselorLoad] = useState<CounselorLoad | null>(null);
   const [filteredOutCount, setFilteredOutCount] = useState(0);
 
@@ -375,6 +380,7 @@ function App() {
 
             const scout = {
               userId: youth.userId,
+              memberId: youth.memberId,
               firstName: youth.firstName,
               lastName: youth.lastName,
               data: {
@@ -455,11 +461,29 @@ function App() {
     }
   };
 
+  // Requirements depend on each scout's current rank, so wait for the roster.
+  const loadRanks = async (refresh = false) => {
+    const unitId = auth.getUnitId();
+    if (!unitId) return;
+    setRankLoad({ state: "loading" });
+    try {
+      const reqs = await loadRankRequirements(unitId, scouts, { refresh });
+      if (auth.getUnitId() === unitId) setRankLoad({ state: "ready", scouts: reqs });
+    } catch (e) {
+      setRankLoad({ state: "error", message: e instanceof Error ? e.message : "unknown error" });
+    }
+  };
+
   useEffect(() => {
-    if (sidePanel && isAuthenticated && counselorLoad === null) loadCounselors();
+    if (sidePanel === "ranks" && isAuthenticated && !loading && scouts.length && rankLoad === null) loadRanks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sidePanel, isAuthenticated, loading, scouts, rankLoad]);
+
+  useEffect(() => {
+    if (sidePanel && sidePanel !== "ranks" && isAuthenticated && counselorLoad === null) loadCounselors();
   }, [sidePanel, isAuthenticated, counselorLoad]);
 
-  const togglePanel = (panel: "planner" | "counselors") =>
+  const togglePanel = (panel: SidePanel) =>
     setSidePanel((open) => (open === panel ? null : panel));
 
   const handleLogout = () => {
@@ -467,11 +491,13 @@ function App() {
     setIsAuthenticated(false);
     setScouts([]);
     setCounselorLoad(null);
+    setRankLoad(null);
   };
 
   const handleClearCache = () => {
     cacheManager.clear();
     setCounselorLoad(null);
+    setRankLoad(null);
     setScouts([]);
     const unitId = auth.getUnitId();
     if (unitId) {
@@ -647,6 +673,16 @@ function App() {
                 <button
                   type="button"
                   className="button button--secondary"
+                  onClick={() => togglePanel("ranks")}
+                  aria-pressed={sidePanel === "ranks"}
+                  title="Open rank requirements across the troop, for planning skills instruction"
+                >
+                  <ClipboardList size={16} strokeWidth={1.5} />
+                  Rank planner
+                </button>
+                <button
+                  type="button"
+                  className="button button--secondary"
                   onClick={() => togglePanel("counselors")}
                   aria-pressed={sidePanel === "counselors"}
                   title="Merit badge counselors in the unit and the badges they cover"
@@ -674,6 +710,14 @@ function App() {
                   counselors={counselorLoad?.state === "ready" ? counselorLoad.counselors : null}
                   unitLabel={unitLabel}
                   onClose={() => setSidePanel(null)}
+                />
+              )}
+              {sidePanel === "ranks" && (
+                <RankPlanner
+                  load={rankLoad ?? { state: "loading" }}
+                  staleScouts={scouts.filter((s) => !s.memberId).length}
+                  onClose={() => setSidePanel(null)}
+                  onRefresh={() => loadRanks(true)}
                 />
               )}
               {sidePanel === "counselors" && counselorLoad && (
