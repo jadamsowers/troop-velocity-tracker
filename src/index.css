@@ -385,8 +385,20 @@ input::placeholder {
 
 .listbar__panels {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .listbar__panels {
+    width: 100%;
+  }
+
+  .listbar__panels .button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
 }
 
 /* ── Workspace: roster + optional planner column ──────────── */
@@ -926,10 +938,31 @@ input::placeholder {
   color: var(--text);
 }
 
+/* ── Rank planner ─────────────────────────────────────────── */
+
+.rank-planner__number {
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.rank-planner .badge-planner__item .badge-planner__note {
+  margin-left: 0;
+}
+
+.rank-planner__text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* ── Counselors ───────────────────────────────────────────── */
 
 .segmented {
   display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
   gap: 2px;
   padding: 2px;
   margin-bottom: 12px;
@@ -938,7 +971,7 @@ input::placeholder {
 }
 
 .segmented__option {
-  flex: 1;
+  flex: 1 0 auto;
   height: 32px;
   padding: 0 8px;
   font-size: 13px;

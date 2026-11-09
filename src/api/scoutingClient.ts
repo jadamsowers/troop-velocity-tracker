@@ -69,6 +69,21 @@ export type UnitLeadershipResponse = Array<{
     }>;
 }>;
 
+export type RankRequirementStatusResponse = Array<{
+    userId: number;
+    memberId: number | string;
+    rankId: number;
+    versionId?: number | string;
+    status?: string;
+    requirements?: Array<{
+        id: number | string;
+        status?: string;
+        dateCompleted?: string | null;
+        leaderApprovedDate?: string | null;
+        markedCompletedDate?: string | null;
+    }>;
+}>;
+
 export interface ActivitySummaryResponse {
     campingLogs?: { totalNumberOfNights?: number; totalNumberOfDays?: number };
     hikingLogs?: { totalNumberOfMiles?: number };
@@ -113,6 +128,14 @@ export const scoutingClient = {
     /** Every youth in the unit with their full leadership position history. */
     getUnitLeadershipPositions: (unitGuid: string): Promise<UnitLeadershipResponse> =>
         scoutingFetch(`/organizations/v2/units/${unitGuid}/leadershipPositions`),
+
+    /** Requirement text for a rank; omit versionId for the current version. */
+    getRankRequirementDefs: (rankId: number, versionId?: string): Promise<{ requirements?: Array<Record<string, unknown>> }> =>
+        scoutingFetch(`/advancements/v2/ranks/${rankId}/requirements${versionId ? `?versionId=${encodeURIComponent(versionId)}` : ''}`),
+
+    /** Requirement completion for several scouts on one rank, in one call. */
+    getUnitRankRequirementStatus: (unitGuid: string, rankId: number, memberIds: number[]): Promise<RankRequirementStatusResponse> =>
+        scoutingFetch(`/advancements/v2/organization/${unitGuid}/ranks/${rankId}/userRequirements?memberId=${memberIds.join(',')}`),
 
     getUnitAdults: (unitGuid: string): Promise<UnitAdultsResponse> =>
         scoutingFetch(`/organizations/v2/units/${unitGuid}/adults`),
