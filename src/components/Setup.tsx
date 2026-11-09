@@ -4,6 +4,8 @@ import { RankPatch } from "./RankPatch";
 import { RANK_ORDER } from "../logic/advancement";
 import { auth } from "../api/auth";
 import type { LoginUnit } from "../api/auth";
+import { isTroop } from "../api/auth";
+import type { UnitAccess } from "../api/scoutingClient";
 import { scoutingClient } from "../api/scoutingClient";
 
 interface Props {
@@ -21,6 +23,17 @@ interface OrgRef {
   unitType?: string;
   unitNumber?: string;
   number?: string;
+}
+
+function accessMessage(access: Exclude<UnitAccess, { ok: true }>, troop = "this troop"): string {
+  switch (access.reason) {
+    case "permission":
+      return `Your account doesn't have permission to view ${troop}'s roster and advancement in Scoutbook. Ask your unit's Key 3 for a position with advancement access (such as Scoutmaster, Assistant Scoutmaster, or an advancement or committee role), then sign in again.`;
+    case "not-troop":
+      return `${troop} is a ${access.unitType ?? "non-troop unit"}. Troop Velocity Tracker only works with Scouts BSA troops.`;
+    default:
+      return `Couldn't check access to ${troop}${access.status ? ` (error ${access.status})` : ""}. Try again in a moment.`;
+  }
 }
 
 export const Setup: React.FC<Props> = ({
@@ -41,6 +54,7 @@ export const Setup: React.FC<Props> = ({
   const [units, setUnits] = useState<LoginUnit[]>([]);
   const [unitId, setUnitId] = useState(auth.getUnitId() || "");
   const [loadingUnits, setLoadingUnits] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(false);
   const [error, setError] = useState("");
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualToken, setManualToken] = useState("");
@@ -65,17 +79,47 @@ export const Setup: React.FC<Props> = ({
     onComplete();
   };
 
-  /** After sign-in: go straight in when the unit is unambiguous, else ask. */
-  const handleNewToken = (newToken: string, found: LoginUnit[]) => {
-    setToken(newToken);
-    setUnits(found);
-    const remembered = found.find((u) => u.guid === auth.getUnitId());
-    const pick = remembered ?? (found.length === 1 ? found[0] : undefined);
-    if (pick && !isEditing) {
-      save(newToken, pick.guid, found);
+  /**
+   * Save only once the account is confirmed to read the troop's roster and
+   * advancement; otherwise explain what's missing and stay put.
+   */
+  const verifyAndSave = async (tokenToSave: string, guid: string, available: LoginUnit[]) => {
+    setCheckingAccess(true);
+    setError("");
+    try {
+      const access = await scoutingClient.checkUnitAccess(guid, tokenToSave);
+      if (!access.ok) {
+        setError(accessMessage(access, available.find((u) => u.guid === guid)?.name));
+        return false;
+      }
+      save(tokenToSave, guid, available);
+      return true;
+    } finally {
+      setCheckingAccess(false);
+    }
+  };
+
+  /** After sign-in: troops only; go straight in when there's one (or the remembered one). */
+  const handleNewToken = async (newToken: string, found: LoginUnit[]) => {
+    const troops = found.filter(isTroop);
+    if (troops.length === 0) {
+      setToken(null);
+      setUnits([]);
+      setError(
+        "Your my.scouting.org account isn't connected to a Scouts BSA troop. Troop Velocity Tracker only works with troops.",
+      );
       return;
     }
-    if (pick) setUnitId(pick.guid);
+    setToken(newToken);
+    setUnits(troops);
+    const remembered = troops.find((u) => u.guid === auth.getUnitId());
+    const pick = remembered ?? (troops.length === 1 ? troops[0] : undefined);
+    if (!pick) return;
+    setUnitId(pick.guid);
+    if (isEditing) return;
+    const saved = await verifyAndSave(newToken, pick.guid, troops);
+    // With only one troop there's nothing else to choose: back to sign-in.
+    if (!saved && troops.length === 1) setToken(null);
   };
 
   const loadUnitsForToken = async (tokenToCheck: string) => {
@@ -102,13 +146,15 @@ export const Setup: React.FC<Props> = ({
           found.push({
             guid,
             name: `${org.unitType || "Unit"} ${org.unitNumber || org.number || ""}`.trim(),
+            type: org.unitType,
           });
         }
       };
       (profile?.organizationPositions || []).forEach(addUnit);
       if (Array.isArray(myScouts)) myScouts.forEach(addUnit);
-      setUnits(found);
-      if (!unitId && found.length === 1) setUnitId(found[0].guid);
+      const troops = found.filter(isTroop);
+      setUnits(troops);
+      if (!unitId && troops.length === 1) setUnitId(troops[0].guid);
       return found;
     } catch (e) {
       console.error("Failed to fetch units:", e);
@@ -129,7 +175,7 @@ export const Setup: React.FC<Props> = ({
     setError("");
     try {
       const result = await auth.loginWithCredentials(username.trim(), password);
-      handleNewToken(result.token, result.units);
+      await handleNewToken(result.token, result.units);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed.");
     } finally {
@@ -145,7 +191,7 @@ export const Setup: React.FC<Props> = ({
     const found = await loadUnitsForToken(value);
     if (found) {
       setManualToken("");
-      handleNewToken(value, found);
+      await handleNewToken(value, found);
     }
   };
 
@@ -272,9 +318,9 @@ export const Setup: React.FC<Props> = ({
             </p>
           ) : units.length > 0 ? (
             <label className="form-field">
-              <span>Unit</span>
+              <span>Troop</span>
               <select value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-                <option value="">Select a unit</option>
+                <option value="">Select a troop</option>
                 {units.map((u) => (
                   <option key={u.guid} value={u.guid}>
                     {u.name}
@@ -283,16 +329,10 @@ export const Setup: React.FC<Props> = ({
               </select>
             </label>
           ) : (
-            <label className="form-field">
-              <span>Unit GUID</span>
-              <input
-                type="text"
-                placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
-                value={unitId}
-                onChange={(e) => setUnitId(e.target.value)}
-              />
-              <small>No units were found on your account, so enter the unit GUID</small>
-            </label>
+            <p className="setup__loading">
+              No Scouts BSA troops were found on this account. Troop Velocity
+              Tracker only works with troops.
+            </p>
           )}
 
           <div className="setup__actions">
@@ -302,11 +342,20 @@ export const Setup: React.FC<Props> = ({
               </button>
             )}
             <button
-              onClick={() => token && save(token, unitId, units)}
-              disabled={!token || !unitId}
+              onClick={() => token && verifyAndSave(token, unitId, units)}
+              disabled={!token || !unitId || checkingAccess}
               className="button button--primary button--large"
             >
-              {isEditing ? "Save" : "Open dashboard"}
+              {checkingAccess ? (
+                <>
+                  <Loader2 className="spin" size={16} strokeWidth={1.5} />
+                  Checking access
+                </>
+              ) : isEditing ? (
+                "Save"
+              ) : (
+                "Open dashboard"
+              )}
             </button>
           </div>
         </section>

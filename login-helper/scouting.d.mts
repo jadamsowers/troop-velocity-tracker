@@ -2,7 +2,7 @@ export interface AuthenticateResult {
   status: number;
   body: {
     token?: string;
-    units?: Array<{ guid: string; name: string }>;
+    units?: Array<{ guid: string; name: string; type?: string }>;
     error?: string;
     code?: unknown;
   };

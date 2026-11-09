@@ -32,7 +32,8 @@ async function fetchUnits(token, userId) {
     const guid = org.organizationGuid || org.orgGuid;
     if (!guid || seen.has(guid)) return;
     const name = `${org.unitType || "Unit"} ${org.unitNumber || org.number || ""}`.trim();
-    units.push({ guid, name });
+    // The tracker only supports troops; it filters on this.
+    units.push({ guid, name, type: org.unitType || "" });
     seen.add(guid);
   };
 
