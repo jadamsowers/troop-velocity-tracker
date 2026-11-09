@@ -938,6 +938,45 @@ input::placeholder {
   color: var(--text);
 }
 
+/* ── Follow-ups ───────────────────────────────────────────── */
+
+.follow-ups .badge-planner__section:first-of-type {
+  margin-top: 4px;
+}
+
+.follow-ups__count {
+  margin-left: 4px;
+  color: var(--text-3);
+}
+
+.follow-ups__list {
+  margin-top: 8px;
+}
+
+.follow-ups__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 13px;
+}
+
+.follow-ups__scout {
+  font-weight: 500;
+}
+
+.follow-ups__subject {
+  color: var(--text-2);
+}
+
+.follow-ups__detail {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
 /* ── Rank planner ─────────────────────────────────────────── */
 
 .rank-planner__number {

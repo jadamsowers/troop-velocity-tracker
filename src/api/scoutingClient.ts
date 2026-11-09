@@ -101,6 +101,7 @@ export interface UnitAdultsResponse {
 
 export interface CounselorProfileResponse {
     memberId: number;
+    userId?: number;
     firstName?: string;
     lastName?: string;
     nickName?: string;

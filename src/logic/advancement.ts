@@ -24,8 +24,23 @@ export interface ActivityTotals {
 // Camping merit badge requires 20 nights of camping.
 export const CAMPING_MB_NIGHTS = 20;
 
+/** A rank or merit badge that's in progress or awaiting approval/presentation. */
+export interface PendingAdvancement {
+    name: string;
+    /** Scoutbook status: Started, Leader Signed, Completed, Counselor Approved, Leader Approved … */
+    status: string;
+    dateStarted?: string;
+    percentCompleted?: number;
+    /** userId of the assigned merit badge counselor, if any. */
+    counselorUserId?: number;
+}
+
 export interface ScoutAdvancement {
     dob: string;
+    /** Ranks not yet awarded that Scoutbook has a status for; undefined in older cache entries. */
+    pendingRanks?: PendingAdvancement[];
+    /** Merit badges started but not yet awarded. */
+    pendingBadges?: PendingAdvancement[];
     ranks: RankDate[];
     /** Undefined when leadership data couldn't be loaded (or predates this field in cache). */
     leadership?: LeadershipPosition[];
