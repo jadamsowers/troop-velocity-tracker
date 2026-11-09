@@ -278,7 +278,7 @@ export const ScoutRow: React.FC<Props> = ({
         <RankPatch
           rank={currentRank === "None" ? "Scout" : currentRank}
           state={currentRank === "None" ? "none" : "earned"}
-          size={24}
+          size={27}
           title={currentRank === "None" ? "No rank yet" : currentRank}
         />
         <div className="scout-row__text">
@@ -404,7 +404,7 @@ export const ScoutRow: React.FC<Props> = ({
               <RankPatch
                 rank={m.rank}
                 state={m.earned ? "earned" : m.late ? "late" : "projected"}
-                size={18}
+                size={20}
                 title={label}
               />
               {shownLabels.has(i) && (
