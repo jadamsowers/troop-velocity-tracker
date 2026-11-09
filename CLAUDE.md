@@ -21,7 +21,8 @@ This is a React 19 + TypeScript PWA (Vite + vite-plugin-pwa) that tracks BSA Sco
 1. **Auth** (`src/api/auth.ts`) — Setup signs in with my.scouting.org username/password via `POST /api/login` (served by `login-helper/server.mjs` in the container, by `plugins/vite-plugin-scoutbook-login.ts` in dev; both call `login-helper/scouting.mjs`). Only the returned JWT and unit GUID are stored in localStorage. The JWT `exp` is checked on load and on a timer; an expired or 401'd token returns the user to sign-in with the unit remembered. The token is decoded client-side to extract `userId`/`personGuid`.
 2. **API client** (`src/api/scoutingClient.ts`) — Wraps `fetch` calls to the Scouting API. In dev, Vite proxies `/scouting-api` to `https://api.scouting.org` to avoid CORS. Endpoints: roster, ranks, merit badges, profile.
 3. **Cache** (`src/api/cache.ts`) — localStorage cache with 1-hour TTL, keyed by unit GUID.
-4. **App.tsx** — Orchestrator: loads roster, fans out parallel requests per scout (ranks + merit badges + profile), filters out 18+ and Eagle scouts, then renders `ScoutRow` cards.
+4. **Counselors** (`src/api/counselors.ts`) — Loaded lazily when the Counselors panel or Badge planner opens: unit adults (`/organizations/v2/units/{unit}/adults`), then each adult's counselor profile (`/advancements/v2/meritBadges/counselors/{memberId}/profile`, 6 at a time). A badge counts only while today is within `effectiveDt`–`expiryDt` (empty `expiryDt` = open-ended). Cached under `{unitId}:counselors` in the roster cache. Coverage math is in `src/logic/counselors.ts`.
+5. **App.tsx** — Orchestrator: loads roster, fans out parallel requests per scout (ranks + merit badges + profile), filters out 18+ and Eagle scouts, then renders `ScoutRow` cards.
 
 ### Core logic
 
@@ -36,6 +37,7 @@ This is a React 19 + TypeScript PWA (Vite + vite-plugin-pwa) that tracks BSA Sco
 - **ScoutRow** (`src/components/ScoutRow.tsx`) — The main card component. Renders a time-scaled SVG-like timeline from age 11 to 18, with earned/projected rank milestones, wait-zone stripes, birthday markers, and a "today" line. Includes a merit badge popover and mailto: draft button.
 - **Setup** (`src/components/Setup.tsx`) — Token + unit configuration form.
 - **ScoutSelectCheckbox** — Checkbox for scout comparison mode.
+- **MeritBadgePlanner** / **CounselorPanel** — Side panels (one open at a time). The planner ranks Eagle-required badges to host; with counselor data it ranks unit-counseled badges first. CounselorPanel shows Eagle-required coverage and gaps, all covered badges, and each counselor's badges.
 
 ### Theme system
 

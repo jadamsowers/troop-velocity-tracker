@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import type {
   GroupBadgeScout,
@@ -7,9 +7,13 @@ import type {
   ScoutAdvancement,
 } from "../logic/advancement";
 import { suggestGroupMeritBadges } from "../logic/advancement";
+import type { UnitCounselor } from "../api/counselors";
+import { badgeKey, counselorIndex } from "../logic/counselors";
 
 interface Props {
   scouts: { firstName: string; lastName: string; data: ScoutAdvancement }[];
+  /** Unit counselors; null while not (yet) loaded, which ranks by demand alone. */
+  counselors: UnitCounselor[] | null;
   onClose: () => void;
 }
 
@@ -61,17 +65,47 @@ const SuggestionCard: React.FC<{ s: GroupBadgeSuggestion; rank?: number }> = ({
       </span>
     </div>
     <p className="badge-planner__note">{s.note}</p>
+    {s.counselors && (
+      <p className="badge-planner__counselors">
+        {s.counselors.length ? (
+          <>
+            Counselor{s.counselors.length !== 1 ? "s" : ""}:{" "}
+            <strong>{s.counselors.map((c) => c.name).join(", ")}</strong>
+          </>
+        ) : (
+          "No counselor in the unit"
+        )}
+        {s.alternates?.map((a) => (
+          <React.Fragment key={a.badge}>
+            {" · "}
+            {a.badge}: {a.counselors.map((c) => c.name).join(", ")}
+          </React.Fragment>
+        ))}
+      </p>
+    )}
     <ScoutChips scouts={s.scouts} />
   </li>
 );
 
-export const MeritBadgePlanner: React.FC<Props> = ({ scouts, onClose }) => {
+export const MeritBadgePlanner: React.FC<Props> = ({
+  scouts,
+  counselors,
+  onClose,
+}) => {
   const [windowMonths, setWindowMonths] = useState(24);
+  const counselorsFor = useMemo(() => {
+    if (!counselors) return undefined;
+    const index = counselorIndex(counselors);
+    return (badge: string) => index.get(badgeKey(badge)) ?? [];
+  }, [counselors]);
   const { suggestions, scoutsInWindow, needElectives } =
-    suggestGroupMeritBadges(scouts, windowMonths);
+    suggestGroupMeritBadges(scouts, windowMonths, counselorsFor);
 
-  const hostable = suggestions.filter((s) => s.format !== "outing");
-  const outings = suggestions.filter((s) => s.format === "outing");
+  // Without counselor data every suggestion counts as runnable.
+  const runnable = (s: GroupBadgeSuggestion) => !s.counselors || s.counselors.length > 0;
+  const hostable = suggestions.filter((s) => runnable(s) && s.format !== "outing");
+  const outings = suggestions.filter((s) => runnable(s) && s.format === "outing");
+  const uncovered = suggestions.filter((s) => !runnable(s));
 
   return (
     <section className="badge-planner" aria-labelledby="badge-planner-title">
@@ -81,8 +115,9 @@ export const MeritBadgePlanner: React.FC<Props> = ({ scouts, onClose }) => {
             Badge planner
           </h3>
           <p className="badge-planner__subtitle">
-            Eagle-required badges to host, ranked by how many scouts need them
-            and how soon they turn 18
+            {counselors
+              ? "Eagle-required badges to host, ranked by whether the unit has a counselor, how many scouts need them and how soon they turn 18"
+              : "Eagle-required badges to host, ranked by how many scouts need them and how soon they turn 18"}
           </p>
         </div>
         <div className="badge-planner__controls">
@@ -129,6 +164,18 @@ export const MeritBadgePlanner: React.FC<Props> = ({ scouts, onClose }) => {
                 <SuggestionCard key={s.bucket} s={s} rank={i + 1} />
               ))}
             </ol>
+          )}
+          {uncovered.length > 0 && (
+            <>
+              <h4 className="badge-planner__section">
+                Needed, but no counselor in the unit
+              </h4>
+              <ul className="badge-planner__list">
+                {uncovered.map((s) => (
+                  <SuggestionCard key={s.bucket} s={s} />
+                ))}
+              </ul>
+            </>
           )}
           {outings.length > 0 && (
             <>
