@@ -120,7 +120,44 @@ export interface CounselorProfileResponse {
     youths?: unknown[];
 }
 
+export type UnitAccess =
+    | { ok: true; unitType?: string }
+    | { ok: false; reason: 'permission' | 'not-troop' | 'unavailable'; status?: number; unitType?: string };
+
+/**
+ * Can this token read the unit's roster and a scout's advancement? Uses plain
+ * fetch so a 401/403 here never triggers the app-wide sign-out.
+ */
+async function checkUnitAccess(unitGuid: string, token: string): Promise<UnitAccess> {
+    const headers = { Authorization: `Bearer ${token}`, 'x-esb-url': ESB_URL, 'Content-Type': 'application/json' };
+    const denied = (status: number) => status === 401 || status === 403;
+    let roster: Response;
+    try {
+        roster = await fetch(`${BASE_URL}/organizations/v2/units/${unitGuid}/youths`, { headers });
+    } catch {
+        return { ok: false, reason: 'unavailable' };
+    }
+    if (denied(roster.status)) return { ok: false, reason: 'permission', status: roster.status };
+    if (!roster.ok) return { ok: false, reason: 'unavailable', status: roster.status };
+    const body = await roster.json().catch(() => ({}));
+    const unitType: string | undefined = body?.unitType;
+    if (unitType && !/^troop$/i.test(unitType)) return { ok: false, reason: 'not-troop', unitType };
+
+    // Roster access alone isn't enough: the dashboard reads each scout's ranks.
+    const firstScout = Array.isArray(body?.users) ? body.users[0]?.userId : undefined;
+    if (firstScout) {
+        try {
+            const ranks = await fetch(`${BASE_URL}/advancements/v2/youth/${firstScout}/ranks`, { headers });
+            if (denied(ranks.status)) return { ok: false, reason: 'permission', status: ranks.status, unitType };
+        } catch {
+            return { ok: false, reason: 'unavailable' };
+        }
+    }
+    return { ok: true, unitType };
+}
+
 export const scoutingClient = {
+    checkUnitAccess,
     setSetupMode: (mode: boolean) => { isInSetupMode = mode; },
 
     getUnitRoster: (unitGuid: string): Promise<RosterResponse> =>

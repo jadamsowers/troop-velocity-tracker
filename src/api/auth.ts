@@ -9,7 +9,13 @@ const EXPIRY_SKEW_MS = 60_000;
 export interface LoginUnit {
     guid: string;
     name: string;
+    /** Scoutbook unit type ("Troop", "Pack", "Crew" …). */
+    type?: string;
 }
+
+/** The tracker models Scouts BSA rank advancement, so only troops apply. */
+export const isTroop = (unit: LoginUnit) =>
+    /^troop$/i.test((unit.type ?? '').trim()) || (!unit.type && /^troop\b/i.test(unit.name));
 
 export interface LoginResult {
     token: string;
