@@ -5,6 +5,7 @@ import { Setup } from "./components/Setup";
 import { MeritBadgePlanner } from "./components/MeritBadgePlanner";
 import { CounselorPanel } from "./components/CounselorPanel";
 import { RankPlanner } from "./components/RankPlanner";
+import { FollowUps } from "./components/FollowUps";
 import type { RankRequirementsLoad } from "./components/RankPlanner";
 import { loadRankRequirements } from "./api/rankRequirements";
 import type { CounselorLoad } from "./components/CounselorPanel";
@@ -16,7 +17,7 @@ import { auth } from "./api/auth";
 import { scoutingClient } from "./api/scoutingClient";
 import { cacheManager } from "./api/cache";
 import { parseISO, differenceInMonths, addMonths } from "date-fns";
-import { Settings, LogOut, Search, ListChecks, ClipboardList, Users, X } from "lucide-react";
+import { Settings, LogOut, Search, ListChecks, ClipboardList, Flag, Users, X } from "lucide-react";
 import { BrandMark } from "./components/BrandMark";
 import { ThemeToggle } from "./theme/ThemeToggle";
 
@@ -47,7 +48,7 @@ function App() {
   const [selectedScouts, setSelectedScouts] = useState<Set<number>>(new Set());
   const [showComparison, setShowComparison] = useState(false);
   // One side panel at a time.
-  type SidePanel = "ranks" | "planner" | "counselors";
+  type SidePanel = "followups" | "ranks" | "planner" | "counselors";
   const [sidePanel, setSidePanel] = useState<SidePanel | null>(null);
   const [rankLoad, setRankLoad] = useState<RankRequirementsLoad | null>(null);
   const [counselorLoad, setCounselorLoad] = useState<CounselorLoad | null>(null);
@@ -303,6 +304,17 @@ function App() {
               };
             });
 
+            const notAwarded = (x: any) => x.awarded !== true && x.status !== "Awarded" && !x.awardedDate;
+            const blankToUndefined = (v: unknown) =>
+              typeof v === "string" && v.trim() ? v : undefined;
+            const pendingRanks = ranksList
+              .filter((r: any) => notAwarded(r) && r.status && r.status !== "All")
+              .map((r: any) => ({
+                name: String(r.name ?? r.rankName ?? "").replace(/ Scout$/, ""),
+                status: String(r.status),
+                percentCompleted: typeof r.percentCompleted === "number" ? r.percentCompleted : undefined,
+              }));
+
             const mbData = mbRes.status === "fulfilled" ? mbRes.value : null;
             let mbArray: any[] = [];
             if (mbData?.program && Array.isArray(mbData.program)) {
@@ -333,6 +345,15 @@ function App() {
               );
             });
             const meritBadgeCount = earnedMeritBadgesObj.length;
+            const pendingBadges = mbArray
+              .filter((mb: any) => notAwarded(mb) && mb.status)
+              .map((mb: any) => ({
+                name: mb.name || mb.short || mb.meritBadge || "",
+                status: String(mb.status),
+                dateStarted: blankToUndefined(mb.dateStarted),
+                percentCompleted: typeof mb.percentCompleted === "number" ? mb.percentCompleted : undefined,
+                counselorUserId: Number(mb.assignedCounselorUserId) || undefined,
+              }));
             const earnedMeritBadges = earnedMeritBadgesObj.map(
               (mb: any) => mb.name || mb.meritBadge || "",
             );
@@ -390,6 +411,8 @@ function App() {
                 earnedMeritBadges,
                 scoutEmail,
                 parentEmails,
+                pendingRanks,
+                pendingBadges,
                 activity: activitySummary
                   ? {
                       campingNights: activitySummary.campingLogs?.totalNumberOfNights ?? 0,
@@ -475,7 +498,8 @@ function App() {
   };
 
   useEffect(() => {
-    if (sidePanel === "ranks" && isAuthenticated && !loading && scouts.length && rankLoad === null) loadRanks();
+    const needsRanks = sidePanel === "ranks" || sidePanel === "followups";
+    if (needsRanks && isAuthenticated && !loading && scouts.length && rankLoad === null) loadRanks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sidePanel, isAuthenticated, loading, scouts, rankLoad]);
 
@@ -673,6 +697,16 @@ function App() {
                 <button
                   type="button"
                   className="button button--secondary"
+                  onClick={() => togglePanel("followups")}
+                  aria-pressed={sidePanel === "followups"}
+                  title="Advancement waiting on an adult: conferences, boards, approvals and stalled badges"
+                >
+                  <Flag size={16} strokeWidth={1.5} />
+                  Follow-ups
+                </button>
+                <button
+                  type="button"
+                  className="button button--secondary"
                   onClick={() => togglePanel("ranks")}
                   aria-pressed={sidePanel === "ranks"}
                   title="Open rank requirements across the troop, for planning skills instruction"
@@ -709,6 +743,15 @@ function App() {
                   scouts={scouts}
                   counselors={counselorLoad?.state === "ready" ? counselorLoad.counselors : null}
                   unitLabel={unitLabel}
+                  onClose={() => setSidePanel(null)}
+                />
+              )}
+              {sidePanel === "followups" && (
+                <FollowUps
+                  scouts={scouts}
+                  requirements={rankLoad?.state === "ready" ? rankLoad.scouts : null}
+                  requirementsLoading={!rankLoad || rankLoad.state === "loading"}
+                  counselors={counselorLoad?.state === "ready" ? counselorLoad.counselors : null}
                   onClose={() => setSidePanel(null)}
                 />
               )}

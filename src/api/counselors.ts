@@ -5,6 +5,8 @@ import { cacheManager } from './cache';
 
 export interface UnitCounselor {
     memberId: number;
+    /** Matches assignedCounselorUserId on a scout's merit badge. */
+    userId?: number;
     name: string;
     email?: string;
     phone?: string;
@@ -39,6 +41,7 @@ function toCounselor(profile: CounselorProfileResponse, fallbackName: string): U
     const first = profile.nickName?.trim() || profile.firstName?.trim();
     return {
         memberId: profile.memberId,
+        userId: profile.userId,
         name: first && profile.lastName ? `${first} ${profile.lastName.trim()}` : fallbackName,
         email: profile.email?.email || undefined,
         phone: profile.phone?.fullPhoneNumber || undefined,
