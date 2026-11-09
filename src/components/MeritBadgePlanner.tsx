@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { Printer, X } from "lucide-react";
 import type {
   GroupBadgeScout,
   GroupBadgeSuggestion,
@@ -9,11 +9,14 @@ import type {
 import { suggestGroupMeritBadges } from "../logic/advancement";
 import type { UnitCounselor } from "../api/counselors";
 import { badgeKey, counselorIndex } from "../logic/counselors";
+import { PrintMeetingPlan } from "./PrintMeetingPlan";
 
 interface Props {
   scouts: { firstName: string; lastName: string; data: ScoutAdvancement }[];
   /** Unit counselors; null while not (yet) loaded, which ranks by demand alone. */
   counselors: UnitCounselor[] | null;
+  /** Heading for the printed plan, e.g. "Troop 405". */
+  unitLabel: string;
   onClose: () => void;
 }
 
@@ -90,6 +93,7 @@ const SuggestionCard: React.FC<{ s: GroupBadgeSuggestion; rank?: number }> = ({
 export const MeritBadgePlanner: React.FC<Props> = ({
   scouts,
   counselors,
+  unitLabel,
   onClose,
 }) => {
   const [windowMonths, setWindowMonths] = useState(24);
@@ -109,6 +113,15 @@ export const MeritBadgePlanner: React.FC<Props> = ({
 
   return (
     <section className="badge-planner" aria-labelledby="badge-planner-title">
+      <PrintMeetingPlan
+        unitLabel={unitLabel}
+        windowMonths={windowMonths}
+        hostable={hostable}
+        uncovered={uncovered}
+        outings={outings}
+        needElectives={needElectives}
+        showCounselors={!!counselors}
+      />
       <div className="badge-planner__header">
         <div>
           <h3 id="badge-planner-title" className="badge-planner__title">
@@ -135,6 +148,16 @@ export const MeritBadgePlanner: React.FC<Props> = ({
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => window.print()}
+            disabled={suggestions.length === 0 && needElectives.length === 0}
+            aria-label="Print meeting plan"
+            title="Print meeting plan"
+          >
+            <Printer size={16} strokeWidth={1.5} />
+          </button>
           <button
             type="button"
             className="icon-button"
