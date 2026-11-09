@@ -639,6 +639,7 @@ function App() {
                 <MeritBadgePlanner
                   scouts={scouts}
                   counselors={counselorLoad?.state === "ready" ? counselorLoad.counselors : null}
+                  unitLabel={unitLabel}
                   onClose={() => setSidePanel(null)}
                 />
               )}
